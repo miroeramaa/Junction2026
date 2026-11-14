@@ -8,6 +8,8 @@ import { dayLabel, timeAgo } from "@/lib/time";
 import { displayName, type Battlecard, type Competitor, type EventRow, type MonitorStatus, type Workspace } from "@/lib/types";
 import { BattlecardView } from "./battlecard";
 import { ChangeItem } from "./redline";
+import { ComparisonMatrix } from "./comparison-matrix";
+import type { ComparisonProfile } from "@/lib/comparison";
 
 type Props = {
   workspace: Workspace;
@@ -16,24 +18,35 @@ type Props = {
   events: EventRow[];
   fresh: Set<string>;
   monitors: MonitorStatus[];
+  dataLoading?: boolean;
+  onProfileSaved?: (id: string, profile: ComparisonProfile) => void;
 };
 
 const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
 const eventTime = (e: EventRow) => e.detected_at ?? e.received_at;
 
-export function Dashboard({ workspace, competitors, cards, events, fresh, monitors }: Props) {
+export function Dashboard({ workspace, competitors, cards, events, fresh, monitors, dataLoading, onProfileSaved }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
+  const [view, setView] = useState<"matrix" | "changes">("matrix");
 
   // Remember the selection in the URL so a refresh (or a teammate) lands on the same view.
   useEffect(() => {
-    const c = new URLSearchParams(window.location.search).get("c");
-    if (c) setSelected(c);
+    const restore = () => {
+      const params = new URLSearchParams(window.location.search);
+      setSelected(params.get("c"));
+      setView(params.get("view") === "changes" ? "changes" : "matrix");
+    };
+    restore();
+    window.addEventListener("popstate", restore);
+    return () => window.removeEventListener("popstate", restore);
   }, []);
-  const select = (id: string | null) => {
+  const select = (id: string | null, nextView = view) => {
     setSelected(id);
+    setView(nextView);
     const url = new URL(window.location.href);
     if (id) url.searchParams.set("c", id);
     else url.searchParams.delete("c");
+    url.searchParams.set("view", nextView);
     window.history.replaceState(null, "", url);
   };
 
@@ -50,7 +63,8 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
     <div className="flex flex-1 flex-col lg:flex-row">
       <nav aria-label="Competitors" className="border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
         <ul className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:overflow-visible">
-          <RailItem active={!selected} onClick={() => select(null)} label="All changes" count={todayCount} />
+          <RailItem active={!selected && view === "matrix"} onClick={() => select(null, "matrix")} label="Competitor overview" count={0} />
+          <RailItem active={!selected && view === "changes"} onClick={() => select(null, "changes")} label="All changes" count={todayCount} />
           <li className="hidden px-3 pt-4 pb-1 text-[12px] text-muted lg:block">Competitors</li>
           {competitors.map((c) => {
             const list = byCompetitor[c.id] ?? [];
@@ -80,6 +94,8 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
             fresh={fresh}
             monitors={monitors.filter((m) => m.competitor_id === current.id)}
           />
+        ) : view === "matrix" ? (
+          <ComparisonMatrix workspaceId={workspace.id} competitors={competitors} cards={cards} events={events} monitors={monitors} onSelect={select} loading={dataLoading} onProfileSaved={onProfileSaved} />
         ) : (
           <Overview workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} onSelect={select} byCompetitor={byCompetitor} />
         )}

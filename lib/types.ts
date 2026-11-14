@@ -1,6 +1,7 @@
 // Shared row types. Mirror supabase/migrations/0001_init.sql; change both together.
 
 import type { Plan } from "./pricing";
+import type { ComparisonProfile } from "./comparison";
 
 export type Signal = "pricing" | "launches" | "news" | "hiring" | "positioning";
 
@@ -53,6 +54,7 @@ export type FeedItem = { title: string; summary?: string | null; url?: string | 
 
 export type Battlecard = {
   competitor_id: string;
+  comparison_profile?: ComparisonProfile | null;
   pricing: { plans: Plan[]; captured_at: string } | null;
   launches: FeedItem[];
   news: FeedItem[];

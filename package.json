@@ -7,7 +7,7 @@
     "lib": "lib"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "node --import tsx --test --test-isolation=none tests/*.test.ts",
     "poc:discover": "node --experimental-websocket --env-file=.env --import tsx poc/01-discover.ts",
     "poc:pricing": "node --experimental-websocket --env-file=.env --import tsx poc/02-pricing.ts",
     "poc:monitor": "node --experimental-websocket --env-file=.env --import tsx poc/03-monitor.ts",

@@ -9,6 +9,7 @@ import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
 import type { Battlecard, Competitor, EventRow, MonitorStatus, Workspace } from "@/lib/types";
+import type { ComparisonProfile } from "@/lib/comparison";
 import { Dashboard } from "./dashboard";
 import { Review } from "./review";
 
@@ -27,26 +28,42 @@ function useWorkspace(id: string) {
   const [cards, setCards] = useState<Record<string, Battlecard>>({});
   const [events, setEvents] = useState<EventRow[]>([]);
   const [fresh, setFresh] = useState<Set<string>>(new Set());
+  const [detailsLoading, setDetailsLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [loadVersion, setLoadVersion] = useState(0);
 
   useEffect(() => {
     const sb = supabaseBrowser();
     const compIds = new Set<string>();
 
     async function load() {
-      const [{ data: ws }, { data: comps }] = await Promise.all([
-        sb.from("workspaces").select("*").eq("id", id).maybeSingle(),
-        sb.from("competitors").select("*").eq("workspace_id", id).order("created_at"),
-      ]);
-      setWorkspace(ws);
-      setCompetitors(comps ?? []);
-      (comps ?? []).forEach((c) => compIds.add(c.id));
-      if (!compIds.size) return;
-      const [{ data: bc }, { data: ev }] = await Promise.all([
-        sb.from("battlecards").select("*").in("competitor_id", [...compIds]),
-        sb.from("events").select(EVENT_COLUMNS).in("competitor_id", [...compIds]).order("received_at", { ascending: false }).limit(200),
-      ]);
-      setCards(Object.fromEntries((bc ?? []).map((b) => [b.competitor_id, b])));
-      setEvents((ev ?? []) as unknown as EventRow[]);
+      try {
+        setLoadError(false);
+        const [workspaceResult, competitorResult] = await Promise.all([
+          sb.from("workspaces").select("*").eq("id", id).maybeSingle(),
+          sb.from("competitors").select("*").eq("workspace_id", id).order("created_at"),
+        ]);
+        if (workspaceResult.error || competitorResult.error) throw new Error("Workspace read failed");
+        const ws = workspaceResult.data;
+        const comps = competitorResult.data;
+        setWorkspace(ws);
+        setCompetitors(comps ?? []);
+        (comps ?? []).forEach((c) => compIds.add(c.id));
+        if (!compIds.size) return;
+        const [cardResult, eventResult] = await Promise.all([
+          sb.from("battlecards").select("*").in("competitor_id", [...compIds]),
+          sb.from("events").select(EVENT_COLUMNS).in("competitor_id", [...compIds]).order("received_at", { ascending: false }).limit(200),
+        ]);
+        if (cardResult.error || eventResult.error) throw new Error("Comparison data read failed");
+        const bc = cardResult.data;
+        const ev = eventResult.data;
+        setCards(Object.fromEntries((bc ?? []).map((b) => [b.competitor_id, b])));
+        setEvents((ev ?? []) as unknown as EventRow[]);
+      } catch {
+        setLoadError(true);
+      } finally {
+        setDetailsLoading(false);
+      }
     }
     load();
 
@@ -90,9 +107,12 @@ function useWorkspace(id: string) {
     return () => {
       sb.removeChannel(channel);
     };
-  }, [id]);
+  }, [id, loadVersion]);
 
-  return { workspace, competitors, cards, events, fresh };
+  const saveProfile = (competitorId: string, profile: ComparisonProfile) => setCards((old) => old[competitorId]
+    ? { ...old, [competitorId]: { ...old[competitorId], comparison_profile: profile } }
+    : old);
+  return { workspace, competitors, cards, events, fresh, detailsLoading, loadError, saveProfile, retry: () => { setDetailsLoading(true); setLoadVersion((v) => v + 1); } };
 }
 
 /** Monitor health. Polls slowly, and every 3 s while a manual check is running. */
@@ -132,7 +152,7 @@ function useMonitors(id: string, active: boolean) {
 }
 
 export function WorkspaceView({ id }: { id: string }) {
-  const { workspace, competitors, cards, events, fresh } = useWorkspace(id);
+  const { workspace, competitors, cards, events, fresh, detailsLoading, loadError, retry, saveProfile } = useWorkspace(id);
   const watching = workspace?.status === "watching";
   const health = useMonitors(id, watching);
   const [, tick] = useState(0);
@@ -141,6 +161,7 @@ export function WorkspaceView({ id }: { id: string }) {
     return () => clearInterval(t);
   }, []);
 
+  if (loadError) return <main className="mx-auto max-w-xl px-4 py-20"><h1 className="text-xl font-semibold">Couldn’t load this workspace</h1><p className="mt-2 text-graphite">The database could not be read. Your existing data has not been changed.</p><button type="button" onClick={retry} className="mt-4 min-h-11 rounded-md bg-ink px-4 py-2 font-semibold text-white">Try again</button></main>;
   if (workspace === undefined) return <p className="p-8 text-graphite">Loading workspace…</p>;
   if (workspace === null)
     return (
@@ -162,7 +183,7 @@ export function WorkspaceView({ id }: { id: string }) {
         </main>
       )}
       {(workspace.status === "discovering" || workspace.status === "review") && <Review workspace={workspace} competitors={competitors} />}
-      {watching && <Dashboard workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} monitors={health.monitors} />}
+      {watching && <Dashboard workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} monitors={health.monitors} dataLoading={detailsLoading} onProfileSaved={saveProfile} />}
     </div>
   );
 }
