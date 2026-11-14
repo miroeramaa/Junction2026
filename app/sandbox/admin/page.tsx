@@ -3,18 +3,17 @@
 // On-stage control panel for the fake competitor: change a price, publish a post, then hit "Sweep now" in the app.
 
 import { useEffect, useState } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { SandboxBlog, SandboxPricing } from "@/lib/types";
 
 async function save(page: string, content: unknown): Promise<boolean> {
-  const res = await adminFetch("/api/sandbox", {
+  const res = await fetch("/api/sandbox", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ page, content }),
   });
-  if (res && !res.ok) alert(`Couldn’t publish: ${res.status}`);
-  return !!res?.ok;
+  if (!res.ok) alert(`Couldn’t publish: ${res.status}`);
+  return res.ok;
 }
 
 export default function SandboxAdmin() {

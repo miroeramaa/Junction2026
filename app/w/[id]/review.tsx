@@ -3,7 +3,6 @@
 // Discovery progress, then choose which competitors to watch.
 
 import { useState } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
 import type { Competitor, Workspace } from "@/lib/types";
 
 function Found({ ok, label }: { ok: boolean; label: string }) {
@@ -69,12 +68,12 @@ export function Review({ workspace, competitors }: { workspace: Workspace; compe
             className="rounded-md bg-ink px-4 py-2 font-semibold text-white disabled:opacity-60"
             onClick={async () => {
               setStarting(true);
-              const res = await adminFetch(`/api/workspaces/${workspace.id}/confirm`, {
+              const res = await fetch(`/api/workspaces/${workspace.id}/confirm`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ competitorIds: chosen.map((c) => c.id), sandbox }),
               });
-              if (!res?.ok) setStarting(false);
+              if (!res.ok) setStarting(false);
             }}
           >
             {starting ? "Starting…" : `Watch ${chosen.length} competitors`}
