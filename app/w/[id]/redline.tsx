@@ -4,6 +4,7 @@
 
 import { displayName, SIGNAL_LABEL, type Competitor, type EventRow } from "@/lib/types";
 import { clock, timeAgo } from "@/lib/time";
+import { hostOf, SourceLink } from "./source";
 
 export function pageTitle(url: string): string {
   try {
@@ -52,6 +53,7 @@ export function ChangeItem({
 }) {
   const at = event.detected_at ?? event.received_at;
   const added = event.added_urls ?? [];
+  const matched = event.signal === "news" ? (event.matched_urls ?? []) : [];
   const title = event.signal === "launches" && added.length ? `Published ${added.length === 1 ? "a new page" : `${added.length} new pages`}` : event.title;
   const lat = latency(event);
 
@@ -85,11 +87,21 @@ export function ChangeItem({
           </ul>
         )}
         {event.diff && event.signal !== "launches" && <Diff diff={event.diff} />}
-        <p className="mt-1.5 flex flex-wrap gap-x-4 text-[12px] text-muted">
-          {event.url && (
-            <a href={event.url} target="_blank" rel="noreferrer" className="hover:text-ink hover:underline">
-              Open the page
-            </a>
+        <p className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-muted">
+          {matched.length > 0 ? (
+            <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
+              <span>{matched.length === 1 ? "Source" : "Sources"}</span>
+              {matched.slice(0, 4).map((u) => (
+                <SourceLink key={u} href={u} label={hostOf(u)} />
+              ))}
+              {matched.length > 4 && <span>+{matched.length - 4} more</span>}
+            </span>
+          ) : (
+            event.url && (
+              <span className="inline-flex min-w-0 items-baseline gap-x-1.5">
+                Source <SourceLink href={event.url} />
+              </span>
+            )
           )}
           <span>{lat ? `Battlecard updated ${lat} after detection` : event.processed_at ? `Detected ${timeAgo(at)}` : "Updating battlecard…"}</span>
         </p>

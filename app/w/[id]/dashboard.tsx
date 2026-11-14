@@ -8,6 +8,7 @@ import { dayLabel, timeAgo } from "@/lib/time";
 import { displayName, type Battlecard, type Competitor, type EventRow, type MonitorStatus, type Workspace } from "@/lib/types";
 import { BattlecardView } from "./battlecard";
 import { ChangeItem } from "./redline";
+import { sourceLabel } from "./source";
 
 type Props = {
   workspace: Workspace;
@@ -184,7 +185,7 @@ function Overview({
 
       <section aria-labelledby="glance-h">
         <h2 id="glance-h" className="text-xl font-semibold tracking-tight">Pricing at a glance</h2>
-        <p className="mt-1 text-[13px] text-graphite">Cheapest paid plan, read from each pricing page.</p>
+        <p className="mt-1 text-[13px] text-graphite">Cheapest paid plan, read from each pricing page (↗ opens it).</p>
         <div className="mt-4 overflow-hidden rounded-lg border border-hairline bg-surface">
           <table className="w-full table-fixed text-left text-[12px] sm:text-[13px]">
             <thead className="border-b border-hairline text-[12px] text-muted">
@@ -204,7 +205,22 @@ function Overview({
                       <span className="font-semibold">{displayName(c)}</span>
                       {lastPricing && <span className="block text-[12px] text-redline">Pricing changed {timeAgo(eventTime(lastPricing))}</span>}
                     </td>
-                    <td className="break-words px-2 py-2.5 text-graphite">{entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}</td>
+                    <td className="break-words px-2 py-2.5 text-graphite">
+                      {entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}
+                      {cards[c.id]?.pricing && c.pricing_url && (
+                        <a
+                          href={c.pricing_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title={`Source: ${sourceLabel(c.pricing_url, 60)}`}
+                          aria-label={`Source: ${displayName(c)} pricing page`}
+                          className="ml-1 text-muted hover:text-ink"
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </td>
                     <td className="tabular whitespace-nowrap px-3 py-2.5 text-right font-semibold sm:px-4">
                       {entry ? formatUsd(entry.value) : "–"}
                       {entry?.basis === "yearly" && <span className="block text-[11px] font-normal text-muted">billed yearly</span>}

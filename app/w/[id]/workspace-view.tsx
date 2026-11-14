@@ -12,7 +12,7 @@ import { Dashboard } from "./dashboard";
 import { Review } from "./review";
 
 const EVENT_COLUMNS =
-  "id, competitor_id, monitor_id, signal, context_event_id, title, summary, importance, url, diff, detected_at, received_at, processed_at, battlecard_updated_at, added_urls:raw->data->change->added_urls";
+  "id, competitor_id, monitor_id, signal, context_event_id, title, summary, importance, url, diff, detected_at, received_at, processed_at, battlecard_updated_at, added_urls:raw->data->change->added_urls, matched_urls:raw->data->change->matched_urls";
 
 type Row = { id: string };
 function upsert<T extends Row>(list: T[], row: T): T[] {

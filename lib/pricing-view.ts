@@ -63,7 +63,8 @@ export function removedPlans(prev: Plan[] | undefined, curr: Plan[]): string[] {
   return prev.filter((p) => !now.has(planKey(p.name))).map((p) => p.name);
 }
 
-export type Series = { key: string; name: string; basis: Basis; points: { t: number; v: number }[] };
+export type SeriesPoint = { t: number; v: number; source: PricingSnapshot["source"] };
+export type Series = { key: string; name: string; basis: Basis; points: SeriesPoint[] };
 
 /**
  * Up to `max` paid plans from the latest snapshot, each on the billing basis it has most often,
@@ -77,12 +78,12 @@ export function historySeries(snaps: PricingSnapshot[], max = 4): Series[] {
   for (const plan of latest.plans) {
     if (series.length >= max) break;
     const key = planKey(plan.name);
-    const history = sorted.map((s) => ({ t: Date.parse(s.captured_at), p: s.plans.find((x) => planKey(x.name) === key) }));
+    const history = sorted.map((s) => ({ t: Date.parse(s.captured_at), source: s.source, p: s.plans.find((x) => planKey(x.name) === key) }));
     const count = (basis: Basis) => history.filter((h) => h.p && (priceOn(h.p, basis) ?? 0) > 0).length;
     const basis: Basis = count("monthly") >= count("yearly") ? "monthly" : "yearly";
     const points = history
-      .map((h) => ({ t: h.t, v: h.p ? priceOn(h.p, basis) : null }))
-      .filter((x): x is { t: number; v: number } => x.v != null && x.v > 0);
+      .map((h) => ({ t: h.t, source: h.source, v: h.p ? priceOn(h.p, basis) : null }))
+      .filter((x): x is SeriesPoint => x.v != null && x.v > 0);
     if (points.length) series.push({ key, name: plan.name, basis, points });
   }
   return series;

@@ -11,6 +11,7 @@ import { SOURCE_LABEL } from "@/lib/types";
 import { parseHowToWin } from "@/lib/how-to-win-view";
 import { PriceHistory } from "./price-history";
 import { ChangeItem } from "./redline";
+import { hostOf, SourceLink, sourceLabel, waybackIndex } from "./source";
 
 const PLAN_ROWS = 6;
 
@@ -27,7 +28,7 @@ function usePricingSnapshots(competitorId: string, version: string | undefined) 
   return snaps;
 }
 
-function Panel({ title, note, children, className = "" }: { title: string; note?: string; children: React.ReactNode; className?: string }) {
+function Panel({ title, note, children, className = "" }: { title: string; note?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
     <section className={`rounded-lg border border-hairline bg-surface ${className}`}>
       <header className="px-4 pt-3.5 pb-2">
@@ -61,7 +62,13 @@ function SourceHealth({ monitors }: { monitors: MonitorStatus[] }) {
           return (
             <li key={m.id} className="inline-flex items-center gap-1.5" title={broken ? m.status : undefined}>
               <span aria-hidden className={broken ? "text-critical" : "text-good"}>{broken ? "✕" : "●"}</span>
-              {SOURCE_LABEL[m.signal]}
+              {m.url ? (
+                <a href={m.url} target="_blank" rel="noreferrer" title={sourceLabel(m.url, 60)} className="underline decoration-hairline underline-offset-2 hover:text-ink hover:decoration-current">
+                  {SOURCE_LABEL[m.signal]}
+                </a>
+              ) : (
+                SOURCE_LABEL[m.signal]
+              )}
               <span className="text-muted">{broken ? "can’t be read" : `checked ${timeAgo(m.last_run_at)}`}</span>
             </li>
           );
@@ -82,7 +89,10 @@ function FeedList({ items, empty }: { items: FeedItem[]; empty: string }) {
             <span className="font-semibold">{it.title}</span>
           )}
           {it.summary && <span className="block text-graphite">{it.summary}</span>}
-          <span className="block text-[12px] text-muted">{timeAgo(it.at)}</span>
+          <span className="block text-[12px] text-muted">
+            {it.url && <>{hostOf(it.url)} · </>}
+            {timeAgo(it.at)}
+          </span>
         </li>
       ))}
     </ul>
@@ -133,12 +143,20 @@ export function BattlecardView({
         </div>
       </header>
 
-      <HowToWinPanel name={displayName(c)} text={card?.how_to_win} />
+      <HowToWinPanel name={displayName(c)} text={card?.how_to_win} pricingUrl={card?.pricing ? c.pricing_url : null} changeCount={events.length} />
 
       <div className="mt-4 grid min-w-0 items-start gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <Panel
           title="Pricing now"
-          note={card?.pricing ? `Read from the pricing page ${timeAgo(card.pricing.captured_at)}.` : "Reading the pricing page…"}
+          note={
+            card?.pricing ? (
+              <>
+                Read {timeAgo(card.pricing.captured_at)} from {c.pricing_url ? <SourceLink href={c.pricing_url} /> : "the pricing page"}
+              </>
+            ) : (
+              "Reading the pricing page…"
+            )
+          }
         >
           {plans.length ? (
             <>
@@ -192,13 +210,24 @@ export function BattlecardView({
           note={
             !series.length
               ? undefined
-              : snaps.length - live.length > 0
-                ? `From ${snaps.length - live.length} archived copies of the pricing page since ${new Date(firstSnap!).toLocaleDateString(undefined, { month: "long", year: "numeric" })}, plus live readings.`
-                : "From live readings of the pricing page. No archived copies were found."
+              : snaps.length - live.length > 0 ? (
+                <>
+                  From{" "}
+                  {c.pricing_url ? (
+                    <SourceLink href={waybackIndex(c.pricing_url)} label={`${snaps.length - live.length} archived copies`} />
+                  ) : (
+                    `${snaps.length - live.length} archived copies`
+                  )}{" "}
+                  of the pricing page since {new Date(firstSnap!).toLocaleDateString(undefined, { month: "long", year: "numeric" })}, plus live readings. Click a
+                  point to open its source.
+                </>
+              ) : (
+                "From live readings of the pricing page. No archived copies were found."
+              )
           }
         >
           {series.length ? (
-          <PriceHistory series={series} />
+          <PriceHistory series={series} pageUrl={c.pricing_url} />
           ) : (
             <p className="text-[13px] text-muted">No archived pricing pages found for this company, so history starts today.</p>
           )}
@@ -241,7 +270,17 @@ export function BattlecardView({
   );
 }
 
-function HowToWinPanel({ name, text }: { name: string; text: string | null | undefined }) {
+function HowToWinPanel({
+  name,
+  text,
+  pricingUrl,
+  changeCount,
+}: {
+  name: string;
+  text: string | null | undefined;
+  pricingUrl: string | null;
+  changeCount: number;
+}) {
   const brief = parseHowToWin(text);
   return (
     <section aria-labelledby="htw-h" className="mt-6 rounded-lg border border-ink/15 bg-surface px-5 py-4">
@@ -263,7 +302,12 @@ function HowToWinPanel({ name, text }: { name: string; text: string | null | und
               </ul>
             </div>
           </div>
-          <p className="mt-3 text-[12px] text-muted">Written by Claude from the data on this page, {timeAgo(brief.generated_at)}. Rewritten whenever {name} changes something.</p>
+          <p className="mt-3 text-[12px] text-muted">
+            Written by Claude {timeAgo(brief.generated_at)} from{" "}
+            {pricingUrl ? <SourceLink href={pricingUrl} label="their pricing page" /> : "their pricing"}
+            {changeCount > 0 && <>, the {Math.min(changeCount, 15)} latest changes below</>} and the press, hiring and messaging feeds on this page. Rewritten whenever{" "}
+            {name} changes something.
+          </p>
         </>
       ) : (
         <p className="mt-1 text-[13px] text-muted">The brief is written once pricing has been read, and rewritten whenever {name} changes something.</p>
