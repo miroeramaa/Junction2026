@@ -1,6 +1,6 @@
-# Competitor Radar — Junction 2026 (Context.dev challenge)
+# Kestrel — Junction 2026 (Context.dev challenge)
 
-> Working name. Alternatives: Rivalry, Tripwire, Battlecard.live.
+> Formerly "Competitor Radar". Kestrel: a falcon that hovers in place and watches for the smallest movement.
 
 ## Pitch
 

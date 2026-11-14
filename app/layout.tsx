@@ -5,7 +5,7 @@ import "./globals.css";
 const schibsted = Schibsted_Grotesk({ variable: "--font-schibsted", subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Competitor Radar",
+  title: "Kestrel",
   description: "See what your competitors changed on their websites, as it happens.",
 };
 
