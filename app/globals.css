@@ -1,26 +1,85 @@
 @import "tailwindcss";
 
+/* "Redline": competitor changes shown as tracked changes. Red appears only where something changed. */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  color-scheme: light;
+  --canvas: #f3f4f6;
+  --surface: #ffffff;
+  --ink: #15171c;
+  --graphite: #5a606b;
+  --muted: #8a909b;
+  --hairline: #e2e5ea;
+  --redline: #d42a3c;
+  --redline-wash: #fdecee;
+  --inserted: #17714a;
+  --good: #0ca30c;
+  --critical: #d03b3b;
+  /* chart series (validated: dataviz slots 1–4 on white, direct labels as relief) */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-ink: var(--ink);
+  --color-graphite: var(--graphite);
+  --color-muted: var(--muted);
+  --color-hairline: var(--hairline);
+  --color-redline: var(--redline);
+  --color-redline-wash: var(--redline-wash);
+  --color-inserted: var(--inserted);
+  --color-good: var(--good);
+  --color-critical: var(--critical);
+  --font-sans: var(--font-schibsted), system-ui, sans-serif;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.tabular {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Redline marks */
+.struck {
+  color: var(--redline);
+  text-decoration: line-through;
+  text-decoration-thickness: 1.5px;
+}
+.inserted {
+  color: var(--inserted);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 3px;
+}
+
+/* The one motion: a change that just arrived gets a red margin mark that settles. */
+@keyframes arrive {
+  from {
+    background-color: var(--redline-wash);
+  }
+  to {
+    background-color: transparent;
+  }
+}
+.just-arrived {
+  animation: arrive 4s ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .just-arrived {
+    animation: none;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }

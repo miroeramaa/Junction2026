@@ -46,6 +46,7 @@ export type EventRow = {
   received_at: string;
   processed_at: string | null;
   battlecard_updated_at: string | null;
+  added_urls?: string[] | null; // sitemap changes, selected from raw
 };
 
 export type FeedItem = { title: string; summary?: string | null; url?: string | null; at: string };
@@ -73,3 +74,29 @@ export type PricingSnapshot = {
 export type SandboxPricing = { plans: { name: string; price: number; limits: string }[] };
 export type SandboxBlog = { posts: { slug: string; title: string; date: string; body: string }[] };
 export type SandboxCareers = { jobs: { title: string; location: string }[] };
+
+export type MonitorStatus = {
+  id: string;
+  competitor_id: string;
+  signal: Signal;
+  status: string;
+  last_run_at: string | null;
+};
+
+/** User-facing names: what is being watched, not how. */
+export const SIGNAL_LABEL: Record<Signal, string> = {
+  pricing: "Pricing",
+  launches: "New pages",
+  news: "Press",
+  hiring: "Hiring",
+  positioning: "Messaging",
+};
+export const SOURCE_LABEL: Record<Signal, string> = {
+  pricing: "Pricing page",
+  launches: "Blog and site pages",
+  news: "Press coverage",
+  hiring: "Careers page",
+  positioning: "Homepage",
+};
+
+export const displayName = (c: Pick<Competitor, "name" | "is_sandbox">) => (c.is_sandbox ? "Scrapr (demo)" : c.name);
