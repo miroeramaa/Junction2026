@@ -1,5 +1,4 @@
 import { z } from "zod";
-import { requireAdmin } from "@/lib/admin";
 import { db } from "@/lib/db";
 import { researchComparisonProfile } from "@/lib/comparison-research";
 import { comparisonLocale, safeSourceUrl } from "@/lib/comparison";
@@ -12,8 +11,6 @@ export const maxDuration = 180;
 const input = z.object({ competitorId: z.string().uuid(), locale: z.string().max(80).optional(), action: z.enum(["research", "audience"]).default("research") });
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
-  const denied = requireAdmin(req);
-  if (denied) return denied;
   const { id } = await params;
   const body = input.safeParse(await req.json().catch(() => null));
   if (!z.string().uuid().safeParse(id).success || !body.success) {

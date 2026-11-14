@@ -5,13 +5,12 @@ import type { ComparisonProfile } from "../lib/comparison";
 
 // Real route + real Supabase client, with every HTTP request intercepted locally.
 // These checks never load .env, contact a service, change the real database or spend credits.
-test("comparison research route authorization, scope, storage and failure behavior", async (t) => {
+test("comparison research route scope, storage and failure behavior", async (t) => {
   t.mock.method(console, "error", () => {}); // Expected failure cases still assert their response and write behavior.
   const workspaceId = "11111111-1111-4111-8111-111111111111";
   const competitorId = "22222222-2222-4222-8222-222222222222";
-  const keys = ["ADMIN_TOKEN", "NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CONTEXT_DEV_API_KEY"];
+  const keys = ["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY", "CONTEXT_DEV_API_KEY"];
   const originalEnv = Object.fromEntries(keys.map((key) => [key, process.env[key]]));
-  process.env.ADMIN_TOKEN = "test-only-password";
   process.env.NEXT_PUBLIC_SUPABASE_URL = "https://database.example.com";
   process.env.SUPABASE_SERVICE_ROLE_KEY = "test-only-service-key";
   process.env.CONTEXT_DEV_API_KEY = "test-only-context-key";
@@ -75,15 +74,11 @@ test("comparison research route authorization, scope, storage and failure behavi
     }
     throw new Error(`Unexpected network request in test: ${url.origin}${url.pathname}`);
   };
-  const request = (body: unknown = { competitorId }, authorized = true) => POST(new Request("http://localhost/api/workspaces/test/comparison", {
-    method: "POST", headers: { "Content-Type": "application/json", ...(authorized ? { "x-admin-token": "test-only-password" } : {}) }, body: JSON.stringify(body),
+  const request = (body: unknown = { competitorId }) => POST(new Request("http://localhost/api/workspaces/test/comparison", {
+    method: "POST", headers: { "Content-Type": "application/json",  }, body: JSON.stringify(body),
   }), { params: Promise.resolve({ id: workspaceId }) });
 
   try {
-    await t.test("unauthorized requests never query paid services", async () => {
-      assert.equal((await request(undefined, false)).status, 403);
-      assert.equal(paidCalls, 0);
-    });
     await t.test("malformed input is rejected before lookup", async () => {
       assert.equal((await request({ competitorId: "not-an-id" })).status, 400);
       assert.equal(paidCalls, 0);

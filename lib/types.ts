@@ -48,6 +48,7 @@ export type EventRow = {
   processed_at: string | null;
   battlecard_updated_at: string | null;
   added_urls?: string[] | null; // sitemap changes, selected from raw
+  matched_urls?: string[] | null; // search changes (press), selected from raw
 };
 
 export type FeedItem = { title: string; summary?: string | null; url?: string | null; at: string };
@@ -83,6 +84,7 @@ export type MonitorStatus = {
   signal: Signal;
   status: string;
   last_run_at: string | null;
+  url: string | null; // the page being watched; null for search monitors
 };
 
 /** User-facing names: what is being watched, not how. */

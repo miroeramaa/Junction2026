@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { Workspace } from "@/lib/types";
 
@@ -54,12 +53,12 @@ export default function Home() {
 
   async function start(c: Candidate) {
     setBusy(c.domain);
-    const res = await adminFetch("/api/onboard", {
+    const res = await fetch("/api/onboard", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ domain: c.domain, name: c.name }),
     });
-    if (!res?.ok) return setBusy(null);
+    if (!res.ok) return setBusy(null);
     const { id } = await res.json();
     router.push(`/w/${id}`);
   }

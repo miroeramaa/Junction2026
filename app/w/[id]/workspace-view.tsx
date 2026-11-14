@@ -5,7 +5,6 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
 import type { Battlecard, Competitor, EventRow, MonitorStatus, Workspace } from "@/lib/types";
@@ -14,7 +13,7 @@ import { Dashboard } from "./dashboard";
 import { Review } from "./review";
 
 const EVENT_COLUMNS =
-  "id, competitor_id, monitor_id, signal, context_event_id, title, summary, importance, url, diff, detected_at, received_at, processed_at, battlecard_updated_at, added_urls:raw->data->change->added_urls";
+  "id, competitor_id, monitor_id, signal, context_event_id, title, summary, importance, url, diff, detected_at, received_at, processed_at, battlecard_updated_at, added_urls:raw->data->change->added_urls, matched_urls:raw->data->change->matched_urls";
 
 type Row = { id: string };
 function upsert<T extends Row>(list: T[], row: T): T[] {
@@ -144,8 +143,8 @@ function useMonitors(id: string, active: boolean) {
 
   async function checkNow() {
     const started = Date.now();
-    const res = await adminFetch(`/api/workspaces/${id}/sweep`, { method: "POST" });
-    if (res?.ok) setCheckStartedAt(started);
+    const res = await fetch(`/api/workspaces/${id}/sweep`, { method: "POST" });
+    if (res.ok) setCheckStartedAt(started);
   }
 
   return { monitors, checkNow, checkStartedAt, checked, checking };
@@ -246,10 +245,10 @@ function TopBar({
             onClick={async () => {
               if (!confirm(`Delete ${workspace.name}? Its monitors stop and its history is removed.`)) return;
               setDeleting(true);
-              const res = await adminFetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
-              if (res?.ok) return router.push("/");
+              const res = await fetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
+              if (res.ok) return router.push("/");
               setDeleting(false);
-              if (res) alert(`Couldn’t delete: ${(await res.json()).error}`);
+              alert(`Couldn’t delete: ${(await res.json()).error}`);
             }}
           >
             {deleting ? "Deleting…" : "Delete"}

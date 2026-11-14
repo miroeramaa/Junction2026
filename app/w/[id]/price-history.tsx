@@ -3,7 +3,8 @@
 // Price history as step lines: a price holds until the next snapshot shows a different one.
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { formatUsd, type Series } from "@/lib/pricing-view";
+import { formatUsd, type Series, type SeriesPoint } from "@/lib/pricing-view";
+import { waybackUrl } from "./source";
 
 const COLORS = ["var(--series-1)", "var(--series-2)", "var(--series-3)", "var(--series-4)"];
 const H = 210;
@@ -21,7 +22,17 @@ function valueAt(s: Series, t: number): number | null {
   return v;
 }
 
-export function PriceHistory({ series }: { series: Series[] }) {
+/** Where a reading came from: the archived copy for Wayback points, the live page otherwise. */
+const pointHref = (pageUrl: string, p: SeriesPoint) => (p.source === "wayback" ? waybackUrl(pageUrl, new Date(p.t).toISOString()) : pageUrl);
+
+/** The reading in effect at time t: the latest point at or before t across all series. */
+function readingAt(series: Series[], t: number): SeriesPoint | null {
+  let best: SeriesPoint | null = null;
+  for (const s of series) for (const p of s.points) if (p.t <= t && (!best || p.t > best.t)) best = p;
+  return best;
+}
+
+export function PriceHistory({ series, pageUrl }: { series: Series[]; pageUrl?: string | null }) {
   const wrap = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(640);
   const [hoverT, setHoverT] = useState<number | null>(null);
@@ -123,9 +134,19 @@ export function PriceHistory({ series }: { series: Series[] }) {
         {series.map((s, i) => (
           <g key={s.key}>
             <path d={path(s)} fill="none" stroke={COLORS[i]} strokeWidth={2} strokeLinejoin="round" />
-            {s.points.map((p) => (
-              <circle key={p.t} cx={x(p.t)} cy={y(p.v)} r={4} fill={COLORS[i]} stroke="var(--surface)" strokeWidth={2} />
-            ))}
+            {s.points.map((p) => {
+              const dot = <circle cx={x(p.t)} cy={y(p.v)} r={4} fill={COLORS[i]} stroke="var(--surface)" strokeWidth={2} />;
+              if (!pageUrl) return <g key={p.t}>{dot}</g>;
+              const when = new Date(p.t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+              return (
+                <a key={p.t} href={pointHref(pageUrl, p)} target="_blank" rel="noreferrer" className="cursor-pointer">
+                  <title>{`${s.name} ${formatUsd(p.v)}, ${p.source === "wayback" ? `archived copy from ${when}` : `read live on ${when}`}. Open source.`}</title>
+                  {/* Larger invisible hit area so the dot is easy to click. */}
+                  <circle cx={x(p.t)} cy={y(p.v)} r={9} fill="transparent" />
+                  {dot}
+                </a>
+              );
+            })}
           </g>
         ))}
 
@@ -159,6 +180,17 @@ export function PriceHistory({ series }: { series: Series[] }) {
               <span className="tabular font-semibold">{formatUsd(valueAt(s, hoverT))}</span>
             </p>
           ))}
+          {(() => {
+            const r = readingAt(series, hoverT);
+            if (!r) return null;
+            const when = new Date(r.t).toLocaleDateString(undefined, { day: "numeric", month: "short", year: "numeric" });
+            return (
+              <p className="mt-1.5 border-t border-hairline pt-1.5 text-muted">
+                {r.source === "wayback" ? `Archived copy, ${when}` : `Live reading, ${when}`}
+                {pageUrl && <span className="block">Click a point to open it</span>}
+              </p>
+            );
+          })()}
         </div>
       )}
 
@@ -169,6 +201,7 @@ export function PriceHistory({ series }: { series: Series[] }) {
             <th>Plan</th>
             <th>Date</th>
             <th>Price per month</th>
+            <th>Source</th>
           </tr>
         </thead>
         <tbody>
@@ -178,6 +211,11 @@ export function PriceHistory({ series }: { series: Series[] }) {
                 <td>{s.name}</td>
                 <td>{new Date(p.t).toLocaleDateString()}</td>
                 <td>{formatUsd(p.v)}</td>
+                <td>
+                  {pageUrl ? (
+                    <a href={pointHref(pageUrl, p)}>{p.source === "wayback" ? "Archived copy" : "Live pricing page"}</a>
+                  ) : p.source === "wayback" ? "Archived copy" : "Live pricing page"}
+                </td>
               </tr>
             )),
           )}

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { adminFetch } from "@/lib/admin-fetch";
 import { comparisonLanguageName, comparisonLocale, comparisonPrices, profileNeedsRefresh, recentCompetitorEvents, safeSourceUrl, type ComparisonFact, type ComparisonProfile } from "@/lib/comparison";
 import { formatUsd } from "@/lib/pricing-view";
 import { timeAgo } from "@/lib/time";
@@ -133,10 +132,9 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
         retryActions.current[c.id] = action;
         setErrors((old) => { const next = { ...old }; delete next[c.id]; return next; });
         try {
-          const response = await adminFetch(`/api/workspaces/${workspaceId}/comparison`, {
+          const response = await fetch(`/api/workspaces/${workspaceId}/comparison`, {
             method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ competitorId: c.id, locale, action }),
           });
-          if (!response) break; // Cancelled authorization stops the queue instead of asking repeatedly.
           const data = await response.json();
           attempted++;
           if (!response.ok) {

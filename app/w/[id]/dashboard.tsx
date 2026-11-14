@@ -10,6 +10,7 @@ import { BattlecardView } from "./battlecard";
 import { ChangeItem } from "./redline";
 import { ComparisonMatrix } from "./comparison-matrix";
 import type { ComparisonProfile } from "@/lib/comparison";
+import { sourceLabel } from "./source";
 
 type Props = {
   workspace: Workspace;
@@ -60,9 +61,9 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
   const todayCount = events.filter((e) => isToday(eventTime(e))).length;
 
   return (
-    <div className="flex flex-1 flex-col lg:flex-row">
-      <nav aria-label="Competitors" className="border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
-        <ul className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:overflow-visible">
+    <div className="flex min-w-0 flex-1 flex-col lg:flex-row">
+      <nav aria-label="Competitors" className="min-w-0 border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
+        <ul className="flex gap-1 overflow-x-auto p-2 [scrollbar-width:thin] lg:flex-col lg:overflow-visible">
           <RailItem active={!selected && view === "matrix"} onClick={() => select(null, "matrix")} label="Competitor overview" count={0} />
           <RailItem active={!selected && view === "changes"} onClick={() => select(null, "changes")} label="All changes" count={todayCount} />
           <li className="hidden px-3 pt-4 pb-1 text-[12px] text-muted lg:block">Competitors</li>
@@ -200,7 +201,7 @@ function Overview({
 
       <section aria-labelledby="glance-h">
         <h2 id="glance-h" className="text-xl font-semibold tracking-tight">Pricing at a glance</h2>
-        <p className="mt-1 text-[13px] text-graphite">Cheapest paid plan, read from each pricing page.</p>
+        <p className="mt-1 text-[13px] text-graphite">Cheapest paid plan, read from each pricing page (↗ opens it).</p>
         <div className="mt-4 overflow-hidden rounded-lg border border-hairline bg-surface">
           <table className="w-full table-fixed text-left text-[12px] sm:text-[13px]">
             <thead className="border-b border-hairline text-[12px] text-muted">
@@ -220,7 +221,22 @@ function Overview({
                       <span className="font-semibold">{displayName(c)}</span>
                       {lastPricing && <span className="block text-[12px] text-redline">Pricing changed {timeAgo(eventTime(lastPricing))}</span>}
                     </td>
-                    <td className="break-words px-2 py-2.5 text-graphite">{entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}</td>
+                    <td className="break-words px-2 py-2.5 text-graphite">
+                      {entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}
+                      {cards[c.id]?.pricing && c.pricing_url && (
+                        <a
+                          href={c.pricing_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          title={`Source: ${sourceLabel(c.pricing_url, 60)}`}
+                          aria-label={`Source: ${displayName(c)} pricing page`}
+                          className="ml-1 text-muted hover:text-ink"
+                        >
+                          ↗
+                        </a>
+                      )}
+                    </td>
                     <td className="tabular whitespace-nowrap px-3 py-2.5 text-right font-semibold sm:px-4">
                       {entry ? formatUsd(entry.value) : "–"}
                       {entry?.basis === "yearly" && <span className="block text-[11px] font-normal text-muted">billed yearly</span>}
