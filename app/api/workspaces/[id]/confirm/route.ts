@@ -1,10 +1,13 @@
 import { after } from "next/server";
+import { requireAdmin } from "@/lib/admin";
 import { db, must } from "@/lib/db";
 import { addSandboxCompetitor, confirmCompetitors } from "@/lib/onboard";
 
 export const maxDuration = 300;
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  const denied = requireAdmin(req);
+  if (denied) return denied;
   const { id } = await params;
   const { competitorIds, sandbox } = (await req.json()) as { competitorIds: string[]; sandbox?: boolean };
   after(async () => {

@@ -7,7 +7,7 @@ import { processEvent, storeChangeEvent } from "@/lib/pipeline";
 import type { Signal } from "@/lib/types";
 import { verifyWebhook } from "@/lib/webhook";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Envelope = { id: string; event: "change.detected" | "run.completed"; data: { change?: Change | null; run?: { completed_at?: string } } };
 
@@ -36,6 +36,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ monitor
 
   const change = event.data.change;
   if (!change || change.monitor_id !== monitor.context_monitor_id) return new Response("bad payload", { status: 400 });
+  // Sitemaps churn: pages disappearing isn't a launch. Only new pages become events.
+  if (monitor.signal === "launches" && !change.added_urls?.length) return new Response(null, { status: 204 });
 
   const eventId = await storeChangeEvent({
     contextEventId: event.id,

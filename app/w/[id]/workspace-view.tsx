@@ -5,6 +5,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
+import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
 import type { Battlecard, Competitor, EventRow, MonitorStatus, Workspace } from "@/lib/types";
@@ -122,8 +123,9 @@ function useMonitors(id: string, active: boolean) {
   }, [checkStartedAt, checking]);
 
   async function checkNow() {
-    setCheckStartedAt(Date.now());
-    await fetch(`/api/workspaces/${id}/sweep`, { method: "POST" });
+    const started = Date.now();
+    const res = await adminFetch(`/api/workspaces/${id}/sweep`, { method: "POST" });
+    if (res?.ok) setCheckStartedAt(started);
   }
 
   return { monitors, checkNow, checkStartedAt, checked, checking };
@@ -223,10 +225,10 @@ function TopBar({
             onClick={async () => {
               if (!confirm(`Delete ${workspace.name}? Its monitors stop and its history is removed.`)) return;
               setDeleting(true);
-              const res = await fetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
-              if (res.ok) return router.push("/");
+              const res = await adminFetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
+              if (res?.ok) return router.push("/");
               setDeleting(false);
-              alert(`Couldn’t delete: ${(await res.json()).error}`);
+              if (res) alert(`Couldn’t delete: ${(await res.json()).error}`);
             }}
           >
             {deleting ? "Deleting…" : "Delete"}
