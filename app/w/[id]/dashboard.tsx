@@ -12,6 +12,7 @@ import { ComparisonMatrix } from "./comparison-matrix";
 import type { ComparisonProfile } from "@/lib/comparison";
 import { sourceLabel } from "./source";
 import { WorkspaceTools } from "./workspace-tools";
+import { MarketBriefPanel } from "./market-brief";
 
 type Props = {
   workspace: Workspace;
@@ -89,6 +90,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
 
       <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-6 lg:px-8">
         <WorkspaceTools workspaceId={workspace.id} events={events} names={names} monitors={monitors} />
+        {!current && <MarketBriefPanel key={workspace.id} workspaceId={workspace.id} companyName={workspace.name} eventVersion={events.map(event => `${event.id}:${event.processed_at ?? ""}`).join("|")} loading={dataLoading} />}
         {current ? (
           <BattlecardView
             key={current.id}

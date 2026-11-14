@@ -22,7 +22,7 @@ async (page) => {
     await page.reload(); await page.setViewportSize({width:1440,height:1000});
     const first=page.getByRole('button',{name:/^Research .+ profile$/}).first(); await first.waitFor();
     const name=(await first.getAttribute('aria-label')).replace(/^Research /,'').replace(/ profile$/,'');
-    const count=await page.getByRole('article').count();
+    const count=await page.locator('[aria-label="Competitor profiles"] article').count();
     assert(requests.length===0,'Viewing must never spend credits');
     await first.click(); await page.getByRole('dialog').waitFor(); await page.keyboard.press('Escape');
     assert(requests.length===0,'Cancelling the confirmation must not send requests');
@@ -48,7 +48,7 @@ async (page) => {
     assert(!await page.getByText('Internal SQL error:',{exact:false}).count(),'Private technical errors must never be displayed');
     assert(await page.getByText('Sample positioning (browser fixture)',{exact:true}).first().isVisible(),'Refresh failure must retain saved facts');
     mode='success'; await page.getByRole('button',{name:/^Research \d+ companies$/}).click(); await confirm(); await idle();
-    assert(await page.locator('article > div > section > ul > li').filter({hasText:'Sample positioning (browser fixture)'}).count()===count,'Bulk research should fill every card');
+    assert(await page.locator('[aria-label="Competitor profiles"] article > div > section > ul > li').filter({hasText:'Sample positioning (browser fixture)'}).count()===count,'Bulk research should fill every card');
     const before=requests.length; mode='hold';
     await page.getByRole('button',{name:'Refresh research',exact:true}).click(); await confirm();
     await page.getByRole('button',{name:'Stop after this company',exact:true}).click();

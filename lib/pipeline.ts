@@ -6,6 +6,8 @@ import { scrapePricing, timestampToIso, type Plan } from "./pricing";
 import { listBatchResults } from "./context";
 import { refreshHowToWin } from "./how-to-win";
 import type { Battlecard, Competitor, EventRow, FeedItem } from "./types";
+import { meaningfulBriefEvent } from "./market-brief";
+import { refreshMarketBriefAfterEvent } from "./market-brief-service";
 
 const KEEP = 10; // feed items kept per battlecard section
 
@@ -89,7 +91,10 @@ export async function processEvent(eventId: string) {
   must(await db().from("events").update({ processed_at: now, battlecard_updated_at: now }).eq("id", ev.id));
 
   // After the data is live (so the latency badge measures the data update), rewrite the sales brief.
-  await refreshHowToWin(competitor.id);
+  await Promise.allSettled([
+    refreshHowToWin(competitor.id),
+    ...(!competitor.is_sandbox && meaningfulBriefEvent(ev) ? [refreshMarketBriefAfterEvent(competitor.workspace_id)] : []),
+  ]);
 }
 
 /** Batch finished: write live pricing to battlecards and Wayback results to pricing_snapshots. */
