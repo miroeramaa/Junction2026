@@ -120,13 +120,13 @@ export function BattlecardView({
   const watchedFor = timeAgo(c.created_at).replace(" ago", "");
 
   return (
-    <article>
+    <article className="min-w-0 break-words">
       <header className="flex flex-wrap items-start gap-3">
         {c.logo_url ? <img src={c.logo_url} alt="" className="h-10 w-10 rounded-md bg-surface object-contain p-1" /> : <span className="h-10 w-10 rounded-md bg-surface" />}
         <div className="min-w-0 flex-1">
           <h2 className="text-2xl font-semibold tracking-tight">{displayName(c)}</h2>
           <p className="max-w-3xl text-[13px] text-graphite">
-            <a href={c.homepage_url ?? `https://${c.domain}`} target="_blank" rel="noreferrer" className="font-semibold hover:underline">{c.domain}</a>
+            <a href={c.homepage_url ?? `https://${c.domain}`} target="_blank" rel="noreferrer" className="break-all font-semibold hover:underline">{c.domain}</a>
           </p>
           {c.why && <p className="mt-0.5 line-clamp-2 max-w-3xl text-[13px] text-muted">{c.why}</p>}
           <SourceHealth monitors={monitors} />
@@ -198,7 +198,7 @@ export function BattlecardView({
           }
         >
           {series.length ? (
-            <PriceHistory series={series} />
+          <PriceHistory series={series} />
           ) : (
             <p className="text-[13px] text-muted">No archived pricing pages found for this company, so history starts today.</p>
           )}

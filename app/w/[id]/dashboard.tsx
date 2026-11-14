@@ -47,9 +47,9 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
   const todayCount = events.filter((e) => isToday(eventTime(e))).length;
 
   return (
-    <div className="flex flex-1 flex-col lg:flex-row">
-      <nav aria-label="Competitors" className="border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
-        <ul className="flex gap-1 overflow-x-auto p-2 lg:flex-col lg:overflow-visible">
+    <div className="flex min-w-0 flex-1 flex-col lg:flex-row">
+      <nav aria-label="Competitors" className="min-w-0 border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
+        <ul className="flex gap-1 overflow-x-auto p-2 [scrollbar-width:thin] lg:flex-col lg:overflow-visible">
           <RailItem active={!selected} onClick={() => select(null)} label="All changes" count={todayCount} />
           <li className="hidden px-3 pt-4 pb-1 text-[12px] text-muted lg:block">Competitors</li>
           {competitors.map((c) => {
