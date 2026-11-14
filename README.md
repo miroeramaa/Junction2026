@@ -70,3 +70,17 @@ These scripts prove each risky step against the real Context.dev API. They only 
 - Are the competitors from step 1 sensible? How long did the full chain take, and how many Brand links were `null`?
 - Does the pricing extraction look right on JavaScript-heavy pricing pages and on Wayback snapshots?
 - How long does run now take to complete, and to webhook? That is the demo latency budget.
+
+### Market brief (strategic insights)
+
+Run `supabase/migrations/0003_market_briefs.sql` once in Supabase SQL Editor. It creates a workspace-scoped cache table with RLS enabled; the app's server API reads/writes it with the existing service key. No new model-provider key is required.
+
+The **Market brief** appears above the competitor overview and All changes feed. **Generate brief** asks Context.dev Answers to interpret captured events for the workspace company. It shows up to three interpretations with company-specific relevance, suggested investigations, qualitative confidence, and expandable observed changes linked to their actual source pages. It can show fewer or none. Interpretations are explicitly separated from the captured observations.
+
+Only confirmed, non-demo competitors in the workspace contribute evidence. Inputs are processed medium/high-importance events from the last 30 days, bounded to the newest 300 queried events and 80 distinct eligible observations. Repeated headlines are deduplicated. A compact subset is selected to respect Answers' 2,000-character task limit. A pattern requires multiple events at different pages for one competitor. A single significant event requires high importance and is capped at tentative confidence. Unknown citations, unrelated competitors and duplicate interpretations are rejected. These structural checks do not independently prove every generated sentence; the UI labels the content as AI interpretation and keeps the observed evidence inspectable.
+
+Generating once enables automatic refresh after meaningful processed webhooks. Concurrent generation is protected by a database lease; automatic refreshes are limited to once per five minutes, and manual retries to once per 30 seconds. Changes arriving inside the cooldown may remain marked as new evidence until another eligible webhook or a manual refresh. Opening the dashboard never generates a brief or spends research credits. The UI polls saved state every 30 seconds (5 seconds during generation) so background updates appear without a reload. Unchanged fingerprints reuse the cached result. Failed generation preserves the last good brief; missing storage is detected before any paid request.
+
+`GET /api/workspaces/[id]/brief?locale=en-US` returns saved content, evidence eligibility and freshness. `POST` with `{ "locale": "en-US" }` requests a refresh. These follow the app's current password-free access model.
+
+`tests/market-brief.browser.js` verifies one-click generation without a confirmation, source links, failure retention and mobile containment with intercepted API fixtures. It never generates a real paid brief. The route tests also cover cache reuse, workspace isolation, cooldowns, concurrent claims and rejection of invented citations.
