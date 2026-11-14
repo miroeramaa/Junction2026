@@ -7,7 +7,7 @@ import { processEvent, storeChangeEvent } from "@/lib/pipeline";
 import type { Signal } from "@/lib/types";
 import { verifyWebhook } from "@/lib/webhook";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 type Envelope = { id: string; event: "change.detected" | "run.completed"; data: { change?: Change | null; run?: { completed_at?: string } } };
 

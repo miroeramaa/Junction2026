@@ -18,7 +18,8 @@
     "start": "next start",
     "check": "node --experimental-websocket --env-file=.env --import tsx poc/00-check.ts",
     "status": "node --experimental-websocket --env-file=.env --import tsx poc/05-status.ts",
-    "delete-workspace": "node --experimental-websocket --env-file=.env --import tsx poc/06-delete-workspace.ts"
+    "delete-workspace": "node --experimental-websocket --env-file=.env --import tsx poc/06-delete-workspace.ts",
+    "how-to-win": "node --experimental-websocket --env-file=.env --import tsx poc/07-how-to-win.ts"
   },
   "keywords": [],
   "author": "",
@@ -33,10 +34,12 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^1.8.0",
     "@supabase/supabase-js": "^2.119.0",
     "next": "^16.4.6",
     "react": "^19.3.0",
-    "react-dom": "^19.3.0"
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.7"
   },
   "type": "module",
   "engines": {

@@ -8,6 +8,7 @@ import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
 import { displayName, type Battlecard, type Competitor, type EventRow, type FeedItem, type MonitorStatus, type PricingSnapshot, type Signal } from "@/lib/types";
 import { SOURCE_LABEL } from "@/lib/types";
+import { parseHowToWin } from "@/lib/how-to-win-view";
 import { PriceHistory } from "./price-history";
 import { ChangeItem } from "./redline";
 
@@ -132,7 +133,9 @@ export function BattlecardView({
         </div>
       </header>
 
-      <div className="mt-6 grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+      <HowToWinPanel name={displayName(c)} text={card?.how_to_win} />
+
+      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <Panel
           title="Pricing now"
           note={card?.pricing ? `Read from the pricing page ${timeAgo(card.pricing.captured_at)}.` : "Reading the pricing page…"}
@@ -235,5 +238,36 @@ export function BattlecardView({
         </div>
       </div>
     </article>
+  );
+}
+
+function HowToWinPanel({ name, text }: { name: string; text: string | null | undefined }) {
+  const brief = parseHowToWin(text);
+  return (
+    <section aria-labelledby="htw-h" className="mt-6 rounded-lg border border-ink/15 bg-surface px-5 py-4">
+      <h3 id="htw-h" className="font-semibold">How to win against {name}</h3>
+      {brief ? (
+        <>
+          <p className="mt-1 max-w-3xl text-[15px]">{brief.headline}</p>
+          <div className="mt-4 grid gap-6 md:grid-cols-2">
+            <div>
+              <h4 className="text-[13px] font-semibold text-graphite">Say this</h4>
+              <ul className="mt-1.5 list-disc space-y-1.5 pl-4 text-[14px] marker:text-muted">
+                {brief.say_this.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+            <div>
+              <h4 className="text-[13px] font-semibold text-graphite">Watch out for</h4>
+              <ul className="mt-1.5 list-disc space-y-1.5 pl-4 text-[14px] marker:text-muted">
+                {brief.watch_out.map((t, i) => <li key={i}>{t}</li>)}
+              </ul>
+            </div>
+          </div>
+          <p className="mt-3 text-[12px] text-muted">Written by Claude from the data on this page, {timeAgo(brief.generated_at)}. Rewritten whenever {name} changes something.</p>
+        </>
+      ) : (
+        <p className="mt-1 text-[13px] text-muted">The brief is written once pricing has been read, and rewritten whenever {name} changes something.</p>
+      )}
+    </section>
   );
 }

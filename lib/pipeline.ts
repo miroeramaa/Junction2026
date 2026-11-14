@@ -4,6 +4,7 @@ import type { Change } from "./context";
 import { db, must } from "./db";
 import { scrapePricing, timestampToIso, type Plan } from "./pricing";
 import { listBatchResults } from "./context";
+import { refreshHowToWin } from "./how-to-win";
 import type { Battlecard, Competitor, EventRow, FeedItem } from "./types";
 
 const KEEP = 10; // feed items kept per battlecard section
@@ -83,11 +84,12 @@ export async function processEvent(eventId: string) {
       break;
   }
 
-  // TODO(next step): regenerate patch.how_to_win with Claude from the updated card.
-
   const now = new Date().toISOString();
   must(await db().from("battlecards").update({ ...patch, updated_at: now, last_event_id: ev.id }).eq("competitor_id", competitor.id));
   must(await db().from("events").update({ processed_at: now, battlecard_updated_at: now }).eq("id", ev.id));
+
+  // After the data is live (so the latency badge measures the data update), rewrite the sales brief.
+  await refreshHowToWin(competitor.id);
 }
 
 /** Batch finished: write live pricing to battlecards and Wayback results to pricing_snapshots. */
@@ -108,4 +110,8 @@ export async function processPricingBatch(batchId: string) {
     }
   }
   must(await db().from("batches").update({ status: "processed" }).eq("id", batchId));
+
+  // First briefs for every competitor in the batch, now that their pricing is known.
+  const competitorIds = [...new Set(results.map((r) => r.itemId.split("|")[0]))];
+  await Promise.all(competitorIds.map((id) => refreshHowToWin(id)));
 }
