@@ -36,6 +36,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ monitor
 
   const change = event.data.change;
   if (!change || change.monitor_id !== monitor.context_monitor_id) return new Response("bad payload", { status: 400 });
+  // Sitemaps churn: pages disappearing isn't a launch. Only new pages become events.
+  if (monitor.signal === "launches" && !change.added_urls?.length) return new Response(null, { status: 204 });
 
   const eventId = await storeChangeEvent({
     contextEventId: event.id,
