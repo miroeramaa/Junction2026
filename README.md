@@ -40,6 +40,13 @@ Run `npm test` for comparison data and rendering checks, then `npm run typecheck
 | `POST /api/webhooks/context/[monitorId]` | Monitor webhooks (per-monitor signing secret) → event row → battlecard update |
 | `POST /api/webhooks/batch/[workspaceId]` | Pricing-history batch finished → `pricing_snapshots` + live pricing on battlecards |
 | `POST /api/workspaces/[id]/sweep` | "Sweep now": run every monitor of the workspace |
+| `GET /api/cron/daily-digest` | Daily email of high/medium importance changes; protected by `CRON_SECRET` |
+
+## Daily email digest and feedback
+
+Apply migrations in order: `0001_init.sql`, `0002_competitor_comparison.sql`, then `0003_alerts_feedback.sql`. The workspace dashboard can search its loaded change history, save a daily digest email and signal filters, rate whether an alert was useful, and change a monitor's interval. Digest delivery uses Vercel Cron at 08:00 UTC and Resend. Configure `RESEND_API_KEY`, a verified `DIGEST_FROM_EMAIL`, and a strong `CRON_SECRET` in the deployment environment. The cron route sends at most five high/medium events per workspace and sends no email on quiet days.
+
+For local development, the cron is not invoked automatically; request `/api/cron/daily-digest` with `Authorization: Bearer <CRON_SECRET>` to run it manually. Use a test recipient and Resend test mode before enabling production delivery.
 | `POST /api/workspaces/[id]/comparison` | Profile update; body `{ "competitorId": "<uuid>", "locale": "en-US", "action": "research" }`; action may be `audience` to analyze saved facts; locale optional, falls back to Accept-Language then English |
 
 Flow: **onboard** (Brand → Answers → Brand per competitor) → **confirm** (create monitors + one batch scraping live pricing and Wayback snapshots) → **webhooks** keep battlecards current.

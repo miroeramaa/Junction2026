@@ -181,6 +181,7 @@ export async function createMonitor(opts: {
 }
 
 export const getMonitor = (id: string) => call<Monitor & { baseline: unknown }>("GET", `/monitors/${id}`);
+export const updateMonitorSchedule = (id: string, schedule: Schedule) => call<Monitor>("PATCH", `/monitors/${id}`, { schedule });
 export const deleteMonitor = (id: string) => call<unknown>("DELETE", `/monitors/${id}`);
 export const runMonitorNow = (id: string) =>
   call<{ monitor_id: string; run_id: string; queued: boolean }>("POST", `/monitors/${id}/run`);

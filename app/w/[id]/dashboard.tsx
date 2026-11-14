@@ -11,6 +11,7 @@ import { ChangeItem } from "./redline";
 import { ComparisonMatrix } from "./comparison-matrix";
 import type { ComparisonProfile } from "@/lib/comparison";
 import { sourceLabel } from "./source";
+import { WorkspaceTools } from "./workspace-tools";
 
 type Props = {
   workspace: Workspace;
@@ -59,6 +60,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
 
   const current = competitors.find((c) => c.id === selected);
   const todayCount = events.filter((e) => isToday(eventTime(e))).length;
+  const names = Object.fromEntries(competitors.map((c) => [c.id, displayName(c)]));
 
   return (
     <div className="flex min-w-0 flex-1 flex-col lg:flex-row">
@@ -86,6 +88,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
       </nav>
 
       <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-6 lg:px-8">
+        <WorkspaceTools workspaceId={workspace.id} events={events} names={names} monitors={monitors} />
         {current ? (
           <BattlecardView
             key={current.id}
