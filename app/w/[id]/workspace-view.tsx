@@ -2,6 +2,7 @@
 
 // Workspace: onboarding progress → competitor review → live feed + battlecards. Everything updates via Realtime.
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { Battlecard, Competitor, EventRow, Workspace } from "@/lib/types";
@@ -77,6 +78,27 @@ function useWorkspace(id: string) {
   return { workspace, competitors, cards, events };
 }
 
+function DeleteButton({ id }: { id: string }) {
+  const router = useRouter();
+  const [busy, setBusy] = useState(false);
+  return (
+    <button
+      className="ml-auto rounded-lg border border-red-500/40 px-3 py-1.5 text-sm text-red-500 disabled:opacity-50"
+      disabled={busy}
+      onClick={async () => {
+        if (!confirm("Delete this workspace and stop all of its monitors?")) return;
+        setBusy(true);
+        const res = await fetch(`/api/workspaces/${id}`, { method: "DELETE" });
+        if (res.ok) return router.push("/");
+        setBusy(false);
+        alert(`Delete failed: ${(await res.json()).error}`);
+      }}
+    >
+      {busy ? "Deleting…" : "Delete workspace"}
+    </button>
+  );
+}
+
 export function WorkspaceView({ id }: { id: string }) {
   const { workspace, competitors, cards, events } = useWorkspace(id);
   if (!workspace) return <p className="p-8">Loading…</p>;
@@ -88,6 +110,7 @@ export function WorkspaceView({ id }: { id: string }) {
         <h1 className="text-2xl font-bold">{workspace.name}</h1>
         <span className="rounded-full bg-zinc-500/15 px-2 py-0.5 text-xs">{workspace.status}</span>
         {workspace.status_detail && <span className="text-sm text-zinc-500">{workspace.status_detail}</span>}
+        <DeleteButton id={workspace.id} />
       </header>
 
       {workspace.status === "error" && <p className="mt-4 text-red-500">Something went wrong: {workspace.status_detail}</p>}

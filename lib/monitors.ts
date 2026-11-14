@@ -44,6 +44,7 @@ export function targetFor(c: Competitor, signal: Signal): { target: MonitorTarge
       };
     }
     case "news":
+      if (c.is_sandbox) return null; // nothing real to find in the press about the fake competitor
       return {
         target: { type: "search", query: `"${c.name}" -site:${c.domain}`, instructions: NEWS_INSTRUCTIONS },
         schedule: every(1, "hours"),

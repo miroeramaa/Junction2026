@@ -17,7 +17,8 @@
     "build": "next build",
     "start": "next start",
     "check": "node --experimental-websocket --env-file=.env --import tsx poc/00-check.ts",
-    "status": "node --experimental-websocket --env-file=.env --import tsx poc/05-status.ts"
+    "status": "node --experimental-websocket --env-file=.env --import tsx poc/05-status.ts",
+    "delete-workspace": "node --experimental-websocket --env-file=.env --import tsx poc/06-delete-workspace.ts"
   },
   "keywords": [],
   "author": "",
