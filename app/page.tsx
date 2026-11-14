@@ -65,7 +65,7 @@ export default function Home() {
 
   return (
     <main className="mx-auto w-full max-w-5xl px-4 py-16 lg:py-24">
-      <p className="text-[13px] font-semibold text-graphite">Competitor Radar</p>
+      <p className="text-[13px] font-semibold text-graphite">Kestrel</p>
       <h1 className="mt-4 max-w-3xl text-4xl leading-[1.08] font-semibold tracking-tight text-balance sm:text-5xl">
         Know what your competitors changed{" "}
         <span className="text-graphite">

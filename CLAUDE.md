@@ -1,6 +1,6 @@
 @AGENTS.md
 
-# Competitor Radar (Junction 2026 hackathon)
+# Kestrel (Junction 2026 hackathon)
 
 - Read `PLAN.md` (product, scope, cut order, team ownership) and `README.md` (setup, routes) first.
 - `lib/context.ts` is the only module that calls Context.dev; extend it rather than calling `fetch` elsewhere.

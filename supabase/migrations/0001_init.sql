@@ -1,4 +1,4 @@
--- Competitor Radar schema. Paste into Supabase → SQL Editor and run once.
+-- Kestrel schema. Paste into Supabase → SQL Editor and run once.
 
 create table workspaces (
   id uuid primary key default gen_random_uuid(),

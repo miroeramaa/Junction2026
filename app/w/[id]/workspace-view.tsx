@@ -214,7 +214,7 @@ function TopBar({
   return (
     <header className="sticky top-0 z-20 border-b border-hairline bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 lg:px-6">
-        <Link href="/" className="text-[13px] font-semibold text-graphite hover:text-ink">Competitor Radar</Link>
+        <Link href="/" className="text-[13px] font-semibold text-graphite hover:text-ink">Kestrel</Link>
         <span className="h-5 w-px bg-hairline" aria-hidden />
         <div className="flex items-center gap-2">
           {workspace.logo_url && <img src={workspace.logo_url} alt="" className="h-6 w-6 rounded" />}

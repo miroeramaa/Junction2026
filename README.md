@@ -1,4 +1,4 @@
-# Competitor Radar
+# Kestrel
 
 The full plan is in [PLAN.md](PLAN.md).
 
