@@ -3,17 +3,18 @@
 // On-stage control panel for the fake competitor: change a price, publish a post, then hit "Sweep now" in the app.
 
 import { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/admin-fetch";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import type { SandboxBlog, SandboxPricing } from "@/lib/types";
 
-async function save(page: string, content: unknown) {
-  const token = typeof window !== "undefined" ? (localStorage.getItem("sandboxToken") ?? "") : "";
-  const res = await fetch("/api/sandbox", {
+async function save(page: string, content: unknown): Promise<boolean> {
+  const res = await adminFetch("/api/sandbox", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-admin-token": token },
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ page, content }),
   });
-  if (!res.ok) alert(`Save failed: ${res.status}`);
+  if (res && !res.ok) alert(`Couldn’t publish: ${res.status}`);
+  return !!res?.ok;
 }
 
 export default function SandboxAdmin() {
@@ -71,7 +72,7 @@ export default function SandboxAdmin() {
         <button
           className="mt-4 rounded bg-zinc-900 px-4 py-2 text-white"
           onClick={async () => {
-            await save("pricing", pricing);
+            if (!(await save("pricing", pricing))) return;
             setStatus(`Pricing published at ${new Date().toLocaleTimeString()}`);
           }}
         >
@@ -88,7 +89,7 @@ export default function SandboxAdmin() {
           onClick={async () => {
             const slug = post.title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
             const next = { posts: [{ slug, title: post.title, body: post.body, date: new Date().toISOString().slice(0, 10) }, ...blog.posts] };
-            await save("blog", next);
+            if (!(await save("blog", next))) return;
             setBlog(next);
             setStatus(`Post "${post.title}" published at ${new Date().toLocaleTimeString()}`);
           }}
