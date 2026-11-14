@@ -13,6 +13,7 @@ import type { ComparisonProfile } from "@/lib/comparison";
 import { sourceLabel } from "./source";
 import { WorkspaceTools } from "./workspace-tools";
 import { MarketBriefPanel } from "./market-brief";
+import { useReadChanges } from "./use-read-changes";
 
 type Props = {
   workspace: Workspace;
@@ -25,7 +26,6 @@ type Props = {
   onProfileSaved?: (id: string, profile: ComparisonProfile) => void;
 };
 
-const isToday = (iso: string) => new Date(iso).toDateString() === new Date().toDateString();
 const eventTime = (e: EventRow) => e.detected_at ?? e.received_at;
 
 export function Dashboard({ workspace, competitors, cards, events, fresh, monitors, dataLoading, onProfileSaved }: Props) {
@@ -60,7 +60,8 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
   }, [events]);
 
   const current = competitors.find((c) => c.id === selected);
-  const todayCount = events.filter((e) => isToday(eventTime(e))).length;
+  const isUnread = useReadChanges(workspace.id, events, current?.id ?? null, !selected && view === "changes", !!dataLoading);
+  const unreadCount = events.filter(isUnread).length;
   const names = Object.fromEntries(competitors.map((c) => [c.id, displayName(c)]));
 
   return (
@@ -68,7 +69,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
       <nav aria-label="Competitors" className="min-w-0 border-b border-hairline bg-surface lg:w-64 lg:shrink-0 lg:border-r lg:border-b-0">
         <ul className="flex gap-1 overflow-x-auto p-2 [scrollbar-width:thin] lg:flex-col lg:overflow-visible">
           <RailItem active={!selected && view === "matrix"} onClick={() => select(null, "matrix")} label="Competitor overview" count={0} />
-          <RailItem active={!selected && view === "changes"} onClick={() => select(null, "changes")} label="All changes" count={todayCount} />
+          <RailItem active={!selected && view === "changes"} onClick={() => select(null, "changes")} label="All changes" count={unreadCount} />
           <li className="hidden px-3 pt-4 pb-1 text-[12px] text-muted lg:block">Competitors</li>
           {competitors.map((c) => {
             const list = byCompetitor[c.id] ?? [];
@@ -79,9 +80,9 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
                 onClick={() => select(c.id)}
                 label={displayName(c)}
                 logo={c.logo_url}
-                count={list.filter((e) => isToday(eventTime(e))).length}
+                count={list.filter(isUnread).length}
                 hint={list[0] ? `Changed ${timeAgo(eventTime(list[0]))}` : "No changes yet"}
-                live={list.some((e) => fresh.has(e.id))}
+                live={list.some((e) => fresh.has(e.id) && isUnread(e))}
               />
             );
           })}
@@ -140,7 +141,7 @@ function RailItem({
           {hint && <span className="hidden text-[12px] text-muted lg:block">{hint}</span>}
         </span>
         {count > 0 && (
-          <span className="tabular rounded-full bg-redline px-1.5 text-[12px] font-semibold text-white" title={`${count} changes today`}>
+          <span className="tabular rounded-full bg-redline px-1.5 text-[12px] font-semibold text-white" title={`${count} unread ${count === 1 ? "change" : "changes"}`}>
             {count}
           </span>
         )}
