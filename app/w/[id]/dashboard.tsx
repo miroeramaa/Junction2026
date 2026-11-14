@@ -94,17 +94,17 @@ export function Dashboard({workspace,competitors,cards,events,fresh,monitors,dat
       {current?<BattlecardView key={current.id} competitor={current} card={cards[current.id]} events={profileEvents} fresh={fresh} onRate={rate} monitors={monitors.filter(m=>m.competitor_id===current.id)} onManage={()=>select(null,"manage")} filterMode={filter} onFilterChange={changeFilter}/>
       :view==="matrix"?<ComparisonMatrix workspaceId={workspace.id} competitors={competitors} cards={cards} events={visibleEvents} monitors={monitors} onSelect={select} loading={dataLoading} onProfileSaved={onProfileSaved}/>
       :view==="brief"?<div className="mx-auto w-full max-w-5xl"><MarketBriefPanel workspaceId={workspace.id} companyName={workspace.name} eventVersion={events.map(event=>`${event.id}:${event.processed_at??""}`).join("|")+JSON.stringify(feedback)} loading={dataLoading}/></div>
-      :view==="manage"?<>
+      :view==="manage"?<div className={settings==="digest"?"mx-auto w-full max-w-2xl":""}>
         <div role="group" aria-label="Watchlist settings" className="mb-6 flex w-fit gap-1 rounded-lg border border-hairline bg-surface p-1">{(["sources","digest"] as const).map(mode=><button key={mode} type="button" aria-pressed={settings===mode} onClick={()=>{setSettings(mode);const url=new URL(location.href);url.searchParams.set("settings",mode);history.replaceState(null,"",url);}} className="min-h-10 rounded-md px-4 text-[12px] font-semibold aria-pressed:bg-ink aria-pressed:text-white">{mode==="sources"?"Competitors & sources":"Email digest"}</button>)}</div>
         {settings==="digest"?<DigestSettings workspaceId={workspace.id}/>:<><ManageCompetitors workspaceId={workspace.id} competitors={competitors} monitors={monitors} onChanged={onControlsChanged}><MonitoringFrequency workspaceId={workspace.id} names={names} monitors={monitors}/></ManageCompetitors><WorkspaceRemoval workspaceId={workspace.id} companyName={workspace.name}/></>}
-      </>:<>
+      </div>:<div className="mx-auto w-full max-w-4xl">
         <header className="mb-6"><p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Evidence, as it arrives</p><h2 className="mt-1 text-3xl font-semibold tracking-tight">All changes</h2><p className="mt-2 text-[13px] text-graphite">Review competitor developments and open the original sources.</p></header>
         <section aria-label="Signal filtering" className="mb-6 flex flex-wrap items-center gap-3 border-b border-hairline pb-4">
           <ChangeSearch query={query} onChange={setQuery}/><div role="group" aria-label="Changes shown" className="flex gap-1 rounded-lg border border-hairline bg-surface p-1">{(["important","all"] as const).map(mode=><button key={mode} type="button" aria-pressed={filter===mode} onClick={()=>changeFilter(mode)} className="min-h-9 rounded-md px-3 text-[12px] font-medium aria-pressed:bg-ink aria-pressed:text-white">{mode==="important"?"Important":"All changes"}</button>)}</div>
           <p className="basis-full text-[11px] text-graphite">{assessed.filter(event=>event.assessment.priority==="quiet").length} routine, repeated or hidden updates {filter==="all"?"included":"filtered out"}.{feedbackError?" Team preferences couldn’t load; basic filtering is active.":""}</p>
         </section>
         <ChangeFeed competitors={competitors} events={visibleEvents.filter(event=>!query.trim()||[event.title,event.summary,event.diff,names[event.competitor_id],SIGNAL_LABEL[event.signal]].some(text=>text?.toLowerCase().includes(query.trim().toLowerCase())))} fresh={fresh} onSelect={select} onRate={rate} query={query}/>
-      </>}
+      </div>}
     </div></main>
   </div>;
 }

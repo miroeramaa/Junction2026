@@ -69,7 +69,7 @@ export function DigestSettings({workspaceId}: {workspaceId:string}) {
     } catch { setDigestNotice({ text: "Couldn’t save your preferences. Please try again.", error: true }); }
     finally { setSavingDigest(false); }
   }
-  return <section aria-labelledby="digest-heading" className="max-w-2xl rounded-xl border border-hairline bg-surface p-5 sm:p-6">
+  return <section aria-labelledby="digest-heading" className="mx-auto w-full max-w-2xl rounded-xl border border-hairline bg-surface p-5 sm:p-6">
     <h2 id="digest-heading" className="text-xl font-semibold tracking-tight">Email digest</h2>
     <p className="mt-2 text-[13px] leading-relaxed text-graphite">Up to five prioritized competitor updates at 08:00 UTC, with links to the evidence. No email on quiet days.</p>
     {loading ? <p role="status" className="mt-5 text-[13px] text-graphite">Loading your preferences…</p> : loadFailed ? <div className="mt-5 flex flex-wrap items-center gap-3"><p role="status" className="text-[13px] text-graphite">Email preferences aren’t available right now.</p><button type="button" onClick={() => setRetry(v => v + 1)} className={`${control} font-semibold`}>Try again</button></div> : <form onSubmit={saveSettings} className="mt-5 space-y-5">

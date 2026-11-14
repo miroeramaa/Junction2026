@@ -12,6 +12,8 @@ async page=>{
  await page.screenshot({path:'output/playwright/navigation-overview-desktop.png'});
  await nav.getByRole('button',{name:'All changes',exact:false}).click();
  await main.getByRole('searchbox',{name:'Search change history'}).waitFor();
+ const centered=async locator=>{const container=await main.boundingBox(),box=await locator.boundingBox();return Math.abs(container.x+container.width/2-box.x-box.width/2)<=2;};
+ assert(await centered(main.getByRole('region',{name:'Changes',exact:true})),'Changes must be centered with its heading and filters');
  assert(!await main.locator('[aria-label="Competitor profiles"]').count(),'Changes must not duplicate company cards');
  assert(!await main.getByRole('region',{name:'Market brief',exact:true}).count(),'Changes must not stack the full brief');
  const diff=main.locator('details').filter({has:page.getByText('View page changes',{exact:true})}).first();
@@ -28,6 +30,8 @@ async page=>{
  await nav.getByRole('button',{name:'Manage watchlist',exact:true}).click();
  await main.getByRole('button',{name:'Email digest',exact:true}).click();
  await main.getByRole('heading',{name:'Email digest',exact:true}).waitFor();
+ assert(await centered(main.getByRole('region',{name:'Email digest',exact:true})),'Email digest must be centered');
+ await page.screenshot({path:'output/playwright/digest-centered-desktop.png'});
  await page.reload();await main.getByRole('heading',{name:'Email digest',exact:true}).waitFor();
  assert(!await main.getByText('Add competitor',{exact:true}).count(),'Digest deep link must retain the isolated settings view');
  await main.getByRole('button',{name:'Competitors & sources',exact:true}).click();
