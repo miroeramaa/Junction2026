@@ -8,11 +8,11 @@ import { db, must } from "./db";
 import type { Battlecard, Competitor, EventRow, Workspace } from "./types";
 
 export const HowToWinSchema = z.object({
-  headline: z.string().describe("One sentence: where this competitor stands right now and what changed most recently."),
+  headline: z.string().describe("One sentence under 25 words: where this competitor stands and what changed most recently."),
   say_this: z
     .array(z.string())
-    .describe("2–4 talk tracks for a sales rep, each tied to a specific fact from the data, e.g. 'They raised Pro to $79: ...'."),
-  watch_out: z.array(z.string()).describe("1–3 places where this competitor is strong or where a deal is at risk."),
+    .describe("2–3 talk tracks for a sales rep, each under 30 words and tied to one specific fact, e.g. 'They raised Pro to $79: ...'."),
+  watch_out: z.array(z.string()).describe("1–2 places where this competitor is strong or a deal is at risk, each under 30 words."),
 });
 export type HowToWin = z.infer<typeof HowToWinSchema> & { generated_at: string };
 
@@ -22,7 +22,7 @@ Write a brief a sales rep can use on a call today.
 - Ground every point in the data you were given and name the specific fact (a price, a plan, a launch, a job post). Don't invent facts.
 - You don't know our own prices, so never state them; compare on what the data shows about the competitor.
 - Prefer recent changes over old ones. If little has changed, say what their pricing and positioning imply.
-- Plain, direct sentences. No marketing language, no headings, no markdown.`;
+- Plain, direct sentences a rep can say out loud. Short beats complete. No marketing language, no headings, no markdown.`;
 
 let client: Anthropic | null = null;
 
