@@ -1,0 +1,184 @@
+{
+  "workspaceId": "a9b66826-f530-49f3-8324-9b8dc0884ec2",
+  "competitorId": "9537a0b2-a53f-40c2-b277-d4777d497e50",
+  "monitors": [
+    {
+      "id": "fe1930ce-7523-485a-879d-372960351506",
+      "signal": "hiring",
+      "status": "active",
+      "context_monitor_id": "mon_9d22f8b5cc754cf0b20a3d137e81155b",
+      "last_run_at": "2026-11-14T21:05:45.298+00:00"
+    },
+    {
+      "id": "5e670a06-9b8a-4198-bbf5-9fb41490dc23",
+      "signal": "pricing",
+      "status": "active",
+      "context_monitor_id": "mon_05d9050d5ff44aa0a0af13fed382676e",
+      "last_run_at": "2026-11-14T21:05:45.41+00:00"
+    }
+  ],
+  "events": [
+    {
+      "id": "f9f88dda-c7e7-4be2-950d-7db7887928fa",
+      "signal": "pricing",
+      "title": "Pricing changed",
+      "summary": "The listed price changed from $59/month to $99/month.",
+      "importance": "high",
+      "detected_at": "2026-11-14T20:56:47.649+00:00",
+      "received_at": "2026-11-14T20:56:48.925684+00:00",
+      "processed_at": "2026-11-14T20:56:53.554+00:00",
+      "battlecard_updated_at": "2026-11-14T20:56:53.554+00:00",
+      "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/pricing"
+    },
+    {
+      "id": "097ac386-6bfd-4bf0-b3c2-b1c3484fab3d",
+      "signal": "hiring",
+      "title": "New Senior Machine Learning Engineer posting",
+      "summary": "A new job posting was added: Senior Machine Learning Engineer \u2014 E2E verification \u00b7 Berlin.",
+      "importance": "medium",
+      "detected_at": "2026-11-14T20:56:47.487+00:00",
+      "received_at": "2026-11-14T20:56:51.640133+00:00",
+      "processed_at": "2026-11-14T20:56:52.884+00:00",
+      "battlecard_updated_at": "2026-11-14T20:56:52.884+00:00",
+      "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/careers"
+    },
+    {
+      "id": "073546cf-922d-464b-954a-333858e858e4",
+      "signal": "hiring",
+      "title": "New Enterprise Solutions Engineer posting in Helsinki",
+      "summary": "The careers page adds an Enterprise Solutions Engineer posting located in Helsinki. The Senior Machine Learning Engineer posting in Berlin remains unchanged.",
+      "importance": "medium",
+      "detected_at": "2026-11-14T21:05:45.298+00:00",
+      "received_at": "2026-11-14T21:05:48.969672+00:00",
+      "processed_at": "2026-11-14T21:05:50.139+00:00",
+      "battlecard_updated_at": "2026-11-14T21:05:50.139+00:00",
+      "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/careers"
+    },
+    {
+      "id": "76787e93-f963-436c-b7d8-52e154f223be",
+      "signal": "pricing",
+      "title": "Pricing changed",
+      "summary": "The price changed from $99/month to $139/month.",
+      "importance": "medium",
+      "detected_at": "2026-11-14T21:05:45.41+00:00",
+      "received_at": "2026-11-14T21:05:49.696728+00:00",
+      "processed_at": "2026-11-14T21:05:55.153+00:00",
+      "battlecard_updated_at": "2026-11-14T21:05:55.153+00:00",
+      "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/pricing"
+    }
+  ],
+  "card": {
+    "pricing": {
+      "plans": [
+        {
+          "name": "Starter",
+          "limits": [
+            "1,000 pages / month"
+          ],
+          "features": [],
+          "billing_note": "billed monthly",
+          "price_monthly_usd": 0,
+          "price_monthly_usd_billed_yearly": null
+        },
+        {
+          "name": "Pro",
+          "limits": [
+            "50,000 pages / month"
+          ],
+          "features": [],
+          "billing_note": "billed monthly",
+          "price_monthly_usd": 139,
+          "price_monthly_usd_billed_yearly": null
+        },
+        {
+          "name": "Scale",
+          "limits": [
+            "1,000,000 pages / month"
+          ],
+          "features": [],
+          "billing_note": "billed monthly",
+          "price_monthly_usd": 299,
+          "price_monthly_usd_billed_yearly": null
+        }
+      ],
+      "captured_at": "2026-11-14T21:05:45.41+00:00"
+    },
+    "hiring": [
+      {
+        "at": "2026-11-14T21:05:45.298+00:00",
+        "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/careers",
+        "title": "New Enterprise Solutions Engineer posting in Helsinki",
+        "summary": "The careers page adds an Enterprise Solutions Engineer posting located in Helsinki. The Senior Machine Learning Engineer posting in Berlin remains unchanged."
+      },
+      {
+        "at": "2026-11-14T20:56:47.487+00:00",
+        "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/careers",
+        "title": "New Senior Machine Learning Engineer posting",
+        "summary": "A new job posting was added: Senior Machine Learning Engineer \u2014 E2E verification \u00b7 Berlin."
+      }
+    ],
+    "updated_at": "2026-11-14T21:05:55.153+00:00",
+    "last_event_id": "76787e93-f963-436c-b7d8-52e154f223be"
+  },
+  "brief": {
+    "content": {
+      "locale": "en-US",
+      "version": 1,
+      "insights": [
+        {
+          "kind": "single_change",
+          "evidence": [
+            {
+              "at": "2026-11-14T20:56:47.649+00:00",
+              "id": "f9f88dda-c7e7-4be2-950d-7db7887928fa",
+              "url": "https://competitor-radar-ashen-six.vercel.app/sandbox/pricing",
+              "diff": "- $59/month\n+ $99/month",
+              "title": "Pricing changed",
+              "signal": "pricing",
+              "summary": "The listed price changed from $59/month to $99/month.",
+              "importance": "high",
+              "competitor_id": "9537a0b2-a53f-40c2-b277-d4777d497e50",
+              "competitor_name": "Scrapr verification fixture"
+            }
+          ],
+          "headline": "Pricing changed",
+          "next_step": "Track future price values on the Scrapr verification fixture to see if this adjustment recurs or varies across test cycles.",
+          "relevance": "Relevant to Kestrel E2E verification as it reflects a controlled change in the fixture used for functional testing, not an actual market shift.",
+          "confidence": "tentative",
+          "interpretation": "The test page shows a price increase from $59/month to $99/month, indicating a high\u2011importance change in the synthetic data set."
+        }
+      ],
+      "window_start": "2026-10-15T21:05:52.718Z",
+      "considered_events": 3
+    },
+    "generated_at": "2026-11-14T21:06:03.528+00:00",
+    "status": "ready",
+    "last_attempt_at": "2026-11-14T21:05:52.718+00:00"
+  },
+  "checked_at": "2026-11-14T21:06:05.699Z",
+  "test_scope": "Isolated synthetic workspace, real Context.dev page monitors and signed public webhooks. UI checks use local refactored app; deployed webhook pipeline is the existing public version.",
+  "stage1_changed_at": "2026-11-14T20:56:24.688Z",
+  "stage2_changed_at": "2026-11-14T21:05:22.720Z",
+  "initial_manual_brief_generated_at": "2026-11-14T21:00:44.380Z",
+  "automatic_refresh_observed": true,
+  "limitations": [
+    "Automatic refresh can finish while another webhook is processing. Existing five-minute automatic cooldown can leave the brief stale; the UI exposes freshness and a manual refresh.",
+    "Optional Anthropic sales analysis was not tested because no Anthropic key is configured."
+  ],
+  "post_fix_manual_brief": {
+    "generated_at": "2026-11-14T21:09:21.399+00:00",
+    "considered_events": 4,
+    "insights": [],
+    "result": "All four processed changes eligible after duplicate fix. Model returned no strategic conclusions for the synthetic fixture."
+  },
+  "cleanup": {
+    "status": 200,
+    "provider_monitor_deletions_accepted": 2,
+    "restored": [
+      "pricing",
+      "careers"
+    ],
+    "skipped": [],
+    "removed_workspace": "a9b66826-f530-49f3-8324-9b8dc0884ec2"
+  }
+}

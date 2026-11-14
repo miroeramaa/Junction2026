@@ -24,9 +24,8 @@ async page => {
  await page.route('**/api/workspaces/*/monitors/schedule',scheduleHandler);
  await page.route('**/api/workspaces/*/events/*/feedback',feedbackHandler);
  try {
-  await page.reload(); await page.setViewportSize({width:1440,height:1000});
-  const tools = page.getByRole('region',{name:'Research and alert tools'});
-  await tools.getByRole('button',{name:'Email digest',exact:true}).click();
+  const url=new URL(page.url());url.search='?view=manage&settings=digest';await page.goto(url.toString()); await page.setViewportSize({width:1440,height:1000});
+  const tools = page.getByRole('main');
   await tools.getByText('Email preferences aren’t available right now.',{exact:true}).waitFor();
   assert(!await tools.getByRole('button',{name:'Save preferences'}).count(),'Failed load must not allow overwriting settings');
   loadError=false; await tools.getByRole('button',{name:'Try again',exact:true}).click();
@@ -40,7 +39,7 @@ async page => {
   await tools.getByText('Preferences saved.',{exact:true}).waitFor();
   assert(saves===2 && settings.digest_enabled && !settings.signals.includes('pricing'),'Save must preserve chosen settings');
   await page.screenshot({path:'output/playwright/tools-digest-desktop.png'});
-  await tools.getByRole('button',{name:'Monitoring',exact:true}).click();
+  await page.getByRole('button',{name:'Manage watchlist',exact:true}).click();await page.getByRole('button',{name:'Competitors & sources',exact:true}).click();await page.getByText('Monitoring frequency',{exact:true}).click();
   assert(!await tools.getByRole('heading',{name:'Your daily catch-up'}).isVisible(),'Only one settings panel should be open');
   const options=tools.getByLabel('Source',{exact:true}).locator('option');
   const selected=await options.nth(1).getAttribute('value');
@@ -53,15 +52,14 @@ async page => {
   await tools.getByText('Monitoring frequency updated.',{exact:true}).waitFor();
   assert(schedules===2,'Schedule retries must be explicit');
   await page.screenshot({path:'output/playwright/tools-monitoring-desktop.png'});
-  await tools.getByRole('button',{name:'Monitoring',exact:true}).click();
+  await page.getByRole('navigation',{name:'Competitors',exact:true}).getByRole('button',{name:'All changes',exact:true}).click();await page.getByRole('group',{name:'Changes shown',exact:true}).getByRole('button',{name:'All changes',exact:true}).click();
   const search=tools.getByRole('searchbox',{name:'Search change history'});
   await search.fill('Nitori');
-  const result=tools.getByRole('article').first(); await result.waitFor();
-  writeError=true;await result.getByRole('button',{name:/^Useful:/}).click();
-  await result.getByText('Couldn’t save feedback. Try again.',{exact:true}).waitFor();
-  writeError=false;await result.getByRole('button',{name:/^Useful:/}).click();
-  await result.getByText('Feedback saved.',{exact:true}).waitFor();
-  assert(await result.getByRole('button',{name:/^Useful:/}).getAttribute('aria-pressed')==='true','Feedback selection must be visible');
+  const result=tools.getByRole('region',{name:'Changes',exact:true}).getByRole('listitem').filter({has:page.getByRole('button',{name:'Hide this update',exact:true})}).first(); await result.waitFor();
+  writeError=true;await result.getByRole('button',{name:'Hide this update',exact:true}).click();
+  await result.getByText('Couldn’t save your preference. Try again.',{exact:true}).waitFor();
+  writeError=false;await result.getByRole('button',{name:'Hide this update',exact:true}).click();
+  await tools.getByRole('region',{name:'Changes',exact:true}).getByRole('button',{name:'Keep this update',exact:true}).first().waitFor();
   assert(feedback===2,'Feedback must be sent once per action');
   await search.fill('no-such-competitor-123'); await tools.getByText('No matching changes',{exact:true}).waitFor();
   await tools.getByRole('button',{name:'Clear search',exact:true}).first().click();
@@ -70,10 +68,10 @@ async page => {
   await search.fill('Nitori'); await page.setViewportSize({width:390,height:844});
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Search must fit a phone viewport');
   await page.screenshot({path:'output/playwright/tools-search-mobile.png'});
-  await tools.getByRole('button',{name:'Email digest',exact:true}).click();
+  await page.getByRole('button',{name:'Manage watchlist',exact:true}).click();await tools.getByRole('button',{name:'Email digest',exact:true}).click();
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Digest must fit a phone viewport');
   await page.screenshot({path:'output/playwright/tools-digest-mobile.png'});
-  await tools.getByRole('button',{name:'Monitoring',exact:true}).click();
+  await tools.getByRole('button',{name:'Competitors & sources',exact:true}).click();await tools.getByText('Monitoring frequency',{exact:true}).click();
   assert(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'Monitoring must fit a phone viewport');
   await page.screenshot({path:'output/playwright/tools-monitoring-mobile.png'});
   assert(!await tools.getByText(/private .* diagnostic/).count(),'Internal errors must stay out of the UI');

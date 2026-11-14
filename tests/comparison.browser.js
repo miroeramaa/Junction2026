@@ -14,7 +14,7 @@ async (page) => {
     if(mode==='hold') await new Promise(resolve=>{release=resolve;});
     const p=profile(); p.locale=body.locale;
     if(body.action==='audience') p.audience_analysis={generated_at:new Date().toISOString(),basis_captured_at:p.captured_at,segments:[{label:'Likely research teams (browser fixture)',reasoning:'The product extracts documents for research.',evidence:[p.positioning]}]};
-    await route.fulfill({status:mode==='failure'?503:200,json:mode==='failure'?{error:'Internal SQL error: private diagnostic details',stopQueue:true}:{profile:p}});
+    await route.fulfill({status:mode==='failure'?503:200,json:mode==='failure'?{error:'Internal SQL error: private diagnostic details',stopQueue:true}:{profile:p,warnings:mode==='audience-warning'?['audience_unavailable']:[]}});
   });
   const idle = () => page.waitForFunction(()=>![...document.querySelectorAll('button')].some(button=>button.textContent?.startsWith('Updating ')));
   try {
@@ -29,6 +29,7 @@ async (page) => {
     assert(requests[0].locale===await page.evaluate(()=>navigator.languages[0]),'Browser language must reach research');
     await page.getByText('Sample positioning (browser fixture)',{exact:true}).first().waitFor();
     const firstCard=page.getByRole('article',{name:`${name} profile`,exact:true});
+    await page.getByRole('button',{name:'Positioning',exact:true}).click();
     await firstCard.locator('summary').filter({hasText:'Evidence (1)'}).first().click();
     await firstCard.getByRole('link',{name:'Open source page',exact:false}).first().waitFor();
     await page.getByRole('button',{name:'Audience',exact:true}).click();
@@ -41,12 +42,17 @@ async (page) => {
     await page.getByRole('navigation',{name:'Competitors'}).getByRole('button',{name:'All changes',exact:false}).click();
     await page.getByRole('button',{name:'Competitor overview',exact:true}).click();
     await page.getByText('Sample positioning (browser fixture)',{exact:true}).first().waitFor();
+    mode='audience-warning';await page.getByRole('button',{name:`Refresh ${name} profile`,exact:true}).click();await idle();
+    await page.getByText('Company research saved. The audience estimate couldn’t update.',{exact:true}).waitFor();
+    mode='success';await page.getByRole('button',{name:'Retry audience estimate',exact:true}).click();await idle();
+    assert(requests.at(-1).action==='audience','Retry must enrich saved research rather than scrape again');
+    assert(!await page.getByText('Company research saved. The audience estimate couldn’t update.',{exact:true}).count(),'Successful retry must clear the warning');
     mode='failure'; await page.getByRole('button',{name:`Refresh ${name} profile`,exact:true}).click(); await idle();
     await page.getByText("Last update couldn't finish. Your saved research is still shown.",{exact:true}).waitFor();
     assert(!await page.getByText('Internal SQL error:',{exact:false}).count(),'Private technical errors must never be displayed');
     assert(await page.getByText('Sample positioning (browser fixture)',{exact:true}).first().isVisible(),'Refresh failure must retain saved facts');
     mode='success'; await page.getByRole('button',{name:/^Research \d+ companies$/}).click(); await idle();
-    assert(await page.locator('[aria-label="Competitor profiles"] article > div > section > ul > li').filter({hasText:'Sample positioning (browser fixture)'}).count()===count,'Bulk research should fill every card');
+    assert(await page.locator('[aria-label="Competitor profiles"] article > div > section > p').filter({hasText:'Sample positioning (browser fixture)'}).count()===count,'Bulk research should fill every card');
     const before=requests.length; mode='hold';
     await page.getByRole('button',{name:'Refresh research',exact:true}).click();
     await page.getByRole('button',{name:'Stop after this company',exact:true}).click();

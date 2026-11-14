@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { ComparisonMatrix, Pricing } from "../app/w/[id]/comparison-matrix";
+import { ComparisonMatrix, Pricing, Facts, Audience } from "../app/w/[id]/comparison-matrix";
 import { comparisonFollowupUrl, verifyProfileFacts } from "../lib/comparison-research";
 import { comparisonLocale, comparisonPrices, profileNeedsRefresh, recentCompetitorEvents, safeSourceUrl, type ComparisonProfile } from "../lib/comparison";
 import type { Battlecard, Competitor, EventRow } from "../lib/types";
@@ -53,11 +53,11 @@ test("translated summaries retain their original Japanese evidence", () => {
 });
 
 test("summary language and original evidence are marked separately", () => {
-  const html = render([competitor()], { one: card({ ...profile, locale: "fi-FI" }) });
+  const html = renderToStaticMarkup(createElement(Facts, {profile: {...profile, locale: "fi-FI"}, items: [profile.positioning!]}));
   assert.match(html, /lang="fi-FI" dir="auto"/);
   assert.match(html, /Original source quotes/);
   assert.match(html, /<blockquote[^>]*lang="" dir="auto"/);
-  assert.match(html, /Summary language:/);
+  assert.match(render([competitor()], { one: card({ ...profile, locale: "fi-FI" }) }), /Summary language:/);
 });
 
 test("monthly and annually billed prices are independent offers, not converted or mixed", () => {
@@ -151,7 +151,8 @@ test("overview uses responsive competitor articles and accessible category butto
   assert.match(html, /Compare by category/);
   assert.match(html, /aria-pressed="true"/);
   assert.doesNotMatch(html, /<table/);
-  assert.match(html, /Evidence \(1\)/);
+  assert.match(html, /Explore company/);
+  assert.doesNotMatch(html, /Original source quotes/);
   assert.match(html, /https:\/\/example.com/);
 });
 test("monthly and annual commitment labels and source dates are visible", () => {
@@ -168,7 +169,7 @@ test("demo data is excluded from the real landscape by default", () => {
 });
 test("an empty matrix and a researched-but-unstated audience have different explanations", () => {
   assert.match(render([]), /No competitors to compare/);
-  assert.match(render([competitor()], { one: card({ ...profile, target_customers: [] }) }), /Audience insight is ready to generate/);
+  assert.match(renderToStaticMarkup(createElement(Audience, {profile: {...profile, target_customers: []}})), /Audience insight is ready to generate/);
 });
 test("plan billing terms are not misrepresented as product capabilities", () => {
   const c = card(null);

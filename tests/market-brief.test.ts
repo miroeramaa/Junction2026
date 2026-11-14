@@ -54,3 +54,8 @@ test("large evidence sets fit the real Answers task limit and retain only suppli
  assert.match(prompt.task,/p0/);
  prompt.evidence.forEach(item=>assert.ok(evidence.some(source=>source.id===item.id)));
 });
+
+test("successive price moves sharing a headline remain distinct evidence",()=>{
+ const evidence=selectBriefEvidence(workspace,competitors,[event("earlier",{signal:"pricing",title:"Pricing changed",summary:"Price increased from $59 to $99",url:"https://competitor.test/pricing",detected_at:"2026-11-14T08:00:00Z"}),event("latest",{signal:"pricing",title:"Pricing changed",summary:"Price increased from $99 to $139",url:"https://competitor.test/pricing"})],now);
+ assert.deepEqual(evidence.map(e=>e.id),["latest","earlier"]);
+});

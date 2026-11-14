@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { useRouter } from "next/navigation";
 import { SIGNAL_LABEL, type Competitor, type MonitorStatus, type Signal } from "@/lib/types";
 import { timeAgo } from "@/lib/time";
 
@@ -17,7 +18,7 @@ async function request(url: string, method: string, body?: unknown) {
   return data;
 }
 
-export function ManageCompetitors({workspaceId, competitors, monitors, onChanged}: {workspaceId:string; competitors:Competitor[]; monitors:MonitorStatus[]; onChanged:()=>void}) {
+export function ManageCompetitors({workspaceId, competitors, monitors, onChanged, children}: {workspaceId:string; competitors:Competitor[]; monitors:MonitorStatus[]; onChanged:()=>void;children?:ReactNode}) {
   const [adding,setAdding]=useState(false);
   const [name,setName]=useState("");
   const [website,setWebsite]=useState("");
@@ -37,7 +38,8 @@ export function ManageCompetitors({workspaceId, competitors, monitors, onChanged
     <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-[10px] font-semibold uppercase tracking-widest text-muted">Your watchlist</p><h2 id="manage-heading" className="mt-1 text-2xl font-semibold tracking-tight">Competitors & sources</h2><p className="mt-2 max-w-xl text-[13px] leading-relaxed text-graphite">Keep the right companies in view. Correct a source, fill a gap, or pause monitoring that no longer matters.</p></div><button type="button" aria-expanded={adding} aria-controls="add-competitor-form" onClick={()=>{setAdding(v=>!v);setNotice(null);}} className={primary}>{adding?"Close form":"+ Add competitor"}</button></div>
     {adding && <form id="add-competitor-form" onSubmit={add} className="mt-5 rounded-xl border border-hairline bg-surface p-5"><h3 className="font-semibold">Add a company to watch</h3><p className="mt-1 text-[12px] text-graphite">Starts a homepage source and a press search. Monitoring uses Context.dev credits. Add pricing, hiring or a sitemap afterwards.</p><fieldset disabled={busy} className="mt-4 grid gap-4 sm:grid-cols-2"><label className="text-[12px] font-semibold">Company name<input required maxLength={100} value={name} onChange={e=>setName(e.target.value)} placeholder="Acme" className={`${control} mt-2 w-full font-normal`} /></label><label className="text-[12px] font-semibold">Company website<input required maxLength={2000} value={website} onChange={e=>setWebsite(e.target.value)} placeholder="acme.com" className={`${control} mt-2 w-full font-normal`} /></label><div className="sm:col-span-2"><button type="submit" disabled={busy||!name.trim()||!website.trim()} className={primary}>{busy?"Adding and starting sources…":"Add and start watching"}</button></div></fieldset></form>}
     <Message notice={notice}/>
-    <div className="mt-6 space-y-3">{competitors.map(c=><CompetitorControls key={c.id} competitor={c} monitors={monitors.filter(m=>m.competitor_id===c.id)} workspaceId={workspaceId} onChanged={onChanged}/>)}</div>
+    <div className="mt-5">{children}</div>
+    <div className="mt-5 space-y-3">{competitors.map(c=><CompetitorControls key={c.id} competitor={c} monitors={monitors.filter(m=>m.competitor_id===c.id)} workspaceId={workspaceId} onChanged={onChanged}/>)}</div>
     {!competitors.length&&<p className="mt-6 rounded-xl border border-dashed border-hairline bg-surface p-8 text-center text-graphite">Your watchlist is empty. Add a competitor to start monitoring.</p>}
   </section>;
 }
@@ -93,4 +95,9 @@ function AddSource({competitor:c,workspaceId,monitors,onChanged}: {competitor:Co
     finally{setBusy(false);}
   }
   return <div className="mt-4">{!!missing.length&&<button type="button" aria-expanded={open} onClick={()=>{setOpen(v=>!v);setSignal(missing[0]);setValue("");setNotice(null);}} className={button}>{open?"Close form":"+ Add a source"}</button>}{open&&!!missing.length&&<form onSubmit={add} className="mt-4 rounded-lg bg-canvas p-4"><fieldset disabled={busy} className="space-y-4"><label className="block text-[12px] font-semibold">Source type<select aria-label="Source type" value={signal} onChange={e=>{setSignal(e.target.value as Signal);setValue("");}} className={`${control} mt-2 w-full`}>{missing.map(signal=><option key={signal} value={signal}>{SIGNAL_LABEL[signal]}</option>)}</select></label><label className="block text-[12px] font-semibold">{signal==="news"?"Press search query":signal==="launches"?"Sitemap URL":"Watched URL"}<input required type={signal==="news"?"text":"url"} value={value} onChange={e=>setValue(e.target.value)} placeholder={signal==="launches"?`https://${c.domain}/sitemap.xml`:signal==="news"?`"${c.name}" -site:${c.domain}`:`https://${c.domain}/…`} className={`${control} mt-2 w-full font-normal`}/></label><p className="text-[12px] text-graphite">Starts a baseline check and scheduled monitoring using Context.dev credits.</p><button type="submit" disabled={busy||!value.trim()} className={primary}>{busy?"Starting source…":"Start monitoring"}</button></fieldset></form>}<Message notice={notice}/></div>;
+}
+
+export function WorkspaceRemoval({workspaceId,companyName}: {workspaceId:string;companyName:string}) {
+  const router=useRouter();const [confirm,setConfirm]=useState(false);const [busy,setBusy]=useState(false);const [notice,setNotice]=useState<Notice>(null);
+  return <details className="mt-8 border-t border-hairline pt-4"><summary className="min-h-10 w-fit cursor-pointer text-[12px] text-graphite">Workspace options</summary><div className="mt-3 rounded-lg border border-hairline bg-surface p-4"><h3 className="text-[13px] font-semibold">Delete {companyName} workspace</h3><p className="mt-1 text-[12px] leading-relaxed text-graphite">Stops all monitors and permanently removes the workspace and its history.</p>{confirm?<div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={busy} onClick={async()=>{setBusy(true);setNotice(null);try{await request(`/api/workspaces/${workspaceId}`,"DELETE");router.push("/");}catch{setNotice({text:"Couldn’t delete this workspace. Please try again.",error:true});setBusy(false);}}} className="min-h-11 rounded-lg bg-redline px-4 text-[12px] font-semibold text-white disabled:opacity-50">{busy?"Stopping monitors…":"Permanently delete workspace"}</button><button type="button" disabled={busy} onClick={()=>setConfirm(false)} className={button}>Keep workspace</button></div>:<button type="button" onClick={()=>setConfirm(true)} className="mt-2 min-h-11 text-[12px] font-semibold text-redline">Delete workspace</button>}<Message notice={notice}/></div></details>;
 }

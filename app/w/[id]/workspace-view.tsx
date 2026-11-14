@@ -3,7 +3,6 @@
 // Workspace shell: loads everything once, then keeps it live via Supabase Realtime.
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useState } from "react";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
@@ -203,8 +202,6 @@ function TopBar({
   competitors: Competitor[];
   health: ReturnType<typeof useMonitors> | null;
 }) {
-  const router = useRouter();
-  const [deleting, setDeleting] = useState(false);
   const lastCheck = health?.monitors.map((m) => m.last_run_at).filter(Boolean).sort().at(-1);
   const failing = health?.monitors.filter((m) => m.status.startsWith("error") || m.status === "failed").length ?? 0;
 
@@ -246,20 +243,7 @@ function TopBar({
               {health.checking ? "Checking…" : "Check now"}
             </button>
           )}
-          <button
-            className="text-[13px] text-graphite hover:text-critical disabled:opacity-50"
-            disabled={deleting}
-            onClick={async () => {
-              if (!confirm(`Delete ${workspace.name}? Its monitors stop and its history is removed.`)) return;
-              setDeleting(true);
-              const res = await fetch(`/api/workspaces/${workspace.id}`, { method: "DELETE" });
-              if (res.ok) return router.push("/");
-              setDeleting(false);
-              alert(`Couldn’t delete: ${(await res.json()).error}`);
-            }}
-          >
-            {deleting ? "Deleting…" : "Delete"}
-          </button>
+
         </div>
       </div>
     </header>

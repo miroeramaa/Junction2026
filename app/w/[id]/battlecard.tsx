@@ -2,11 +2,12 @@
 
 // One competitor: what they charge, how that moved, and everything they changed.
 
+import { Facts, Audience } from "./comparison-matrix";
 import { useEffect, useState } from "react";
 import { diffPlans, formatUsd, historySeries, planKey, priceOn, removedPlans, type CellChange } from "@/lib/pricing-view";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 import { timeAgo } from "@/lib/time";
-import { displayName, type Battlecard, type Competitor, type EventRow, type FeedItem, type MonitorStatus, type PricingSnapshot, type Signal } from "@/lib/types";
+import { displayName, type Battlecard, type Competitor, type EventRow, type MonitorStatus, type PricingSnapshot, type Signal } from "@/lib/types";
 import { SOURCE_LABEL } from "@/lib/types";
 import { parseHowToWin } from "@/lib/how-to-win-view";
 import { PriceHistory } from "./price-history";
@@ -15,16 +16,17 @@ import { hostOf, SourceLink, sourceLabel, waybackIndex } from "./source";
 
 const PLAN_ROWS = 6;
 
-function usePricingSnapshots(competitorId: string, version: string | undefined) {
+function usePricingSnapshots(competitorId: string, version: string | undefined, active: boolean) {
   const [snaps, setSnaps] = useState<PricingSnapshot[]>([]);
   useEffect(() => {
+    if (!active) return;
     supabaseBrowser()
       .from("pricing_snapshots")
       .select("*")
       .eq("competitor_id", competitorId)
       .order("captured_at")
       .then(({ data }) => setSnaps(data ?? []));
-  }, [competitorId, version]); // refetch when the battlecard's pricing changes
+  }, [competitorId, version, active]); // refetch when the battlecard's pricing changes
   return snaps;
 }
 
@@ -58,10 +60,10 @@ function SourceHealth({ monitors }: { monitors: MonitorStatus[] }) {
       {[...monitors]
         .sort((a, b) => order.indexOf(a.signal) - order.indexOf(b.signal))
         .map((m) => {
-          const broken = m.status.startsWith("error") || m.status === "failed" || m.status === "paused";
+          const broken = m.status.startsWith("error") || m.status === "failed";
           return (
             <li key={m.id} className="inline-flex items-center gap-1.5" title={broken ? m.status : undefined}>
-              <span aria-hidden className={broken ? "text-critical" : "text-good"}>{broken ? "✕" : "●"}</span>
+              <span aria-hidden className={m.status === "paused" ? "text-muted" : broken ? "text-critical" : "text-good"}>{m.status === "paused" ? "Ⅱ" : broken ? "✕" : "●"}</span>
               {m.url ? (
                 <a href={m.url} target="_blank" rel="noreferrer" title={sourceLabel(m.url, 60)} className="underline decoration-hairline underline-offset-2 hover:text-ink hover:decoration-current">
                   {SOURCE_LABEL[m.signal]}
@@ -69,32 +71,10 @@ function SourceHealth({ monitors }: { monitors: MonitorStatus[] }) {
               ) : (
                 SOURCE_LABEL[m.signal]
               )}
-              <span className="text-muted">{broken ? "can’t be read" : `checked ${timeAgo(m.last_run_at)}`}</span>
+              <span className="text-muted">{m.status === "paused" ? "paused" : broken ? "can’t be read" : `checked ${timeAgo(m.last_run_at)}`}</span>
             </li>
           );
         })}
-    </ul>
-  );
-}
-
-function FeedList({ items, empty }: { items: FeedItem[]; empty: string }) {
-  if (!items?.length) return <p className="text-[13px] text-muted">{empty}</p>;
-  return (
-    <ul className="space-y-2.5">
-      {items.slice(0, 5).map((it, i) => (
-        <li key={i} className="text-[13px]">
-          {it.url ? (
-            <a href={it.url} target="_blank" rel="noreferrer" className="font-semibold hover:underline">{it.title}</a>
-          ) : (
-            <span className="font-semibold">{it.title}</span>
-          )}
-          {it.summary && <span className="block text-graphite">{it.summary}</span>}
-          <span className="block text-[12px] text-muted">
-            {it.url && <>{hostOf(it.url)} · </>}
-            {timeAgo(it.at)}
-          </span>
-        </li>
-      ))}
     </ul>
   );
 }
@@ -106,6 +86,9 @@ export function BattlecardView({
   fresh,
   onRate,
   monitors,
+  onManage,
+  filterMode = "important",
+  onFilterChange,
 }: {
   competitor: Competitor;
   card?: Battlecard;
@@ -113,8 +96,13 @@ export function BattlecardView({
   fresh: Set<string>;
   onRate?: (id:string,rating:"useful"|"not_useful")=>Promise<boolean>;
   monitors: MonitorStatus[];
+  onManage?:()=>void;
+  filterMode?:"important"|"all";
+  onFilterChange?:(mode:"important"|"all")=>void;
 }) {
-  const snaps = usePricingSnapshots(c.id, card?.pricing?.captured_at);
+  const [tab,setTab]=useState<"overview"|"pricing"|"activity">("overview");
+  useEffect(()=>{const restore=()=>{const value=new URLSearchParams(location.search).get("profile");setTab(value==="pricing"||value==="activity"?value:"overview");};restore();window.addEventListener("popstate",restore);return()=>window.removeEventListener("popstate",restore);},[]);
+  const snaps = usePricingSnapshots(c.id, card?.pricing?.captured_at, tab==="pricing");
   const [allPlans, setAllPlans] = useState(false);
 
   const plans = card?.pricing?.plans ?? [];
@@ -141,13 +129,19 @@ export function BattlecardView({
             <a href={c.homepage_url ?? `https://${c.domain}`} target="_blank" rel="noreferrer" className="break-all font-semibold hover:underline">{c.domain}</a>
           </p>
           {c.why && <p className="mt-0.5 line-clamp-2 max-w-3xl text-[13px] text-muted">{c.why}</p>}
-          <SourceHealth monitors={monitors} />
+          <p className="mt-2 text-[11px] text-graphite">{monitors.length} monitored sources</p>
         </div>
       </header>
 
-      <HowToWinPanel name={displayName(c)} text={card?.how_to_win} pricingUrl={card?.pricing ? c.pricing_url : null} changeCount={events.length} />
+      <div role="group" aria-label="Company view" className="my-6 flex w-fit gap-1 rounded-lg border border-hairline bg-surface p-1">{(["overview","pricing","activity"] as const).map(value=><button key={value} type="button" aria-pressed={tab===value} onClick={()=>{setTab(value);const url=new URL(location.href);url.searchParams.set("profile",value);history.replaceState(null,"",url);}} className="min-h-10 rounded-md px-4 text-[12px] font-semibold capitalize aria-pressed:bg-ink aria-pressed:text-white">{value[0].toUpperCase()+value.slice(1)}</button>)}</div>
+      {tab==="overview"&&<div className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-2"><Panel title="Positioning"><Facts profile={card?.comparison_profile} items={card?.comparison_profile?.positioning?[card.comparison_profile.positioning]:[]}/></Panel><Panel title="Who they serve"><Audience profile={card?.comparison_profile}/></Panel><div className="lg:col-span-2"><Panel title="Products & services"><Facts profile={card?.comparison_profile} items={card?.comparison_profile?.capabilities??[]}/></Panel></div></div>
+        {events[0]&&<section className="rounded-xl border border-hairline bg-surface p-5"><h3 className="text-[10px] font-semibold uppercase tracking-widest text-muted">Latest change</h3><p className="mt-2 text-[14px] font-semibold">{events[0].title}</p><p className="mt-1 text-[12px] text-graphite">{events[0].summary}</p><button type="button" onClick={()=>{setTab("activity");const url=new URL(location.href);url.searchParams.set("profile","activity");history.replaceState(null,"",url);}} className="mt-2 min-h-10 text-[12px] font-semibold">View activity →</button></section>}
+        <details className="rounded-lg border border-hairline bg-surface p-4"><summary className="min-h-8 cursor-pointer text-[12px] font-semibold">Monitored sources</summary><SourceHealth monitors={monitors}/>{onManage&&<button type="button" onClick={onManage} className="mt-2 min-h-11 text-[12px] font-semibold">Manage sources →</button>}</details>
+        {!!card?.how_to_win&&<details className="rounded-lg border border-hairline bg-surface p-4"><summary className="min-h-8 cursor-pointer text-[12px] font-semibold">Sales analysis</summary><HowToWinPanel name={displayName(c)} text={card.how_to_win} pricingUrl={card.pricing?c.pricing_url:null} changeCount={events.length}/></details>}
+      </div>}
 
-      <div className="mt-4 grid min-w-0 items-start gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+      {tab==="pricing"&&<div className="grid min-w-0 items-start gap-4 xl:grid-cols-[minmax(0,24rem)_minmax(0,1fr)]">
         <Panel
           title="Pricing now"
           note={
@@ -234,13 +228,14 @@ export function BattlecardView({
             <p className="text-[13px] text-muted">No archived pricing pages found for this company, so history starts today.</p>
           )}
         </Panel>
-      </div>
+      </div>}
 
-      <div className="mt-4 grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,22rem)]">
+      {tab==="activity"&&<div className="max-w-4xl">
         <section className="rounded-lg border border-hairline bg-surface">
           <header className="px-4 pt-3.5 pb-2">
             <h3 className="font-semibold">Changes</h3>
             <p className="text-[12px] text-muted">Watching for {watchedFor}.</p>
+            {onFilterChange&&<div role="group" aria-label="Company changes shown" className="mt-3 flex gap-2">{(["important","all"] as const).map(mode=><button key={mode} type="button" aria-pressed={filterMode===mode} onClick={()=>onFilterChange(mode)} className="min-h-10 rounded-md border border-hairline px-3 text-[12px] aria-pressed:bg-ink aria-pressed:text-white">{mode==="important"?"Important":"All changes"}</button>)}</div>}
           </header>
           {events.length ? (
             <ul className="divide-y divide-hairline border-t border-hairline">
@@ -253,21 +248,7 @@ export function BattlecardView({
           )}
         </section>
 
-        <div className="space-y-4">
-          <Panel title="New pages">
-            <FeedList items={card?.launches ?? []} empty="No new blog posts or pages yet." />
-          </Panel>
-          <Panel title="Press">
-            <FeedList items={card?.news ?? []} empty="No new coverage yet." />
-          </Panel>
-          <Panel title="Hiring">
-            <FeedList items={card?.hiring ?? []} empty={c.careers_url ? "No new or removed job posts yet." : "No careers page found."} />
-          </Panel>
-          <Panel title="Messaging">
-            <FeedList items={card?.positioning ? [card.positioning] : []} empty="Homepage headline hasn’t changed." />
-          </Panel>
-        </div>
-      </div>
+      </div>}
     </article>
   );
 }

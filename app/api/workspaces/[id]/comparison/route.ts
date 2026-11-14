@@ -38,16 +38,18 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
       return Response.json({ profile });
     }
     const researched = await researchComparisonProfile(url, locale);
+    const warnings: string[] = [];
     if (!researched.target_customers.length) {
       try {
         researched.audience_analysis = await analyzeAudience(competitor.name ?? competitor.domain, researched);
       } catch (error) {
         // AI interpretation is optional: a provider outage must not discard verified research.
-        console.error("comparison audience unavailable", competitor.id, error);
+        warnings.push("audience_unavailable");
+        console.warn("comparison audience unavailable", competitor.id, error instanceof ComparisonResearchError ? error.message : "Provider request failed");
       }
     }
     const profile = await saveComparisonProfile(competitor.id, researched);
-    return Response.json({ profile });
+    return Response.json({ profile, warnings });
   } catch (error) {
     console.error("comparison research", competitor.id, error);
     if (error instanceof ComparisonResearchError) {

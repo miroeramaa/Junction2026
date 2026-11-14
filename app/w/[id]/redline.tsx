@@ -78,7 +78,7 @@ export function ChangeItem({
           {showCompetitor && competitor ? SIGNAL_LABEL[event.signal].toLowerCase() : SIGNAL_LABEL[event.signal]}
           {event.importance === "high" && <span className="ml-2 font-semibold text-redline">Important</span>}
         </p>
-        {event.assessment && <p className="mt-1 text-[11px] text-graphite">{event.assessment.priority === "quiet" ? "Filtered" : event.assessment.priority === "high" ? "High priority" : "Signal"} · {event.assessment.reason}</p>}
+
         <p className="mt-0.5 font-semibold">{title}</p>
         {event.summary && event.signal !== "launches" && <p className="mt-0.5 text-graphite">{event.summary}</p>}
         {added.length > 0 && (
@@ -92,7 +92,7 @@ export function ChangeItem({
             ))}
           </ul>
         )}
-        {event.diff && event.signal !== "launches" && <Diff diff={event.diff} />}
+        {event.diff && event.signal !== "launches" && <details className="mt-2 text-[12px] text-graphite"><summary className="min-h-8 w-fit cursor-pointer font-medium">View page changes</summary><Diff diff={event.diff} /></details>}
         <p className="mt-1.5 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[12px] text-muted">
           {matched.length > 0 ? (
             <span className="inline-flex min-w-0 flex-wrap items-baseline gap-x-2">
@@ -111,7 +111,10 @@ export function ChangeItem({
           )}
           <span>{lat ? `Battlecard updated ${lat} after detection` : event.processed_at ? `Detected ${timeAgo(at)}` : "Updating battlecard…"}</span>
         </p>
-        {onRate&&<button type="button" disabled={ratingBusy} onClick={async()=>{setRatingBusy(true);setRatingError(false);const ok=await onRate(event.id,event.assessment?.priority==="quiet"?"useful":"not_useful");setRatingError(!ok);setRatingBusy(false);}} className="mt-1 min-h-10 text-[11px] font-medium text-graphite hover:text-ink disabled:opacity-50">{ratingBusy?"Saving…":event.assessment?.priority==="quiet"?"Keep this update":"Hide this update"}</button>}
+        <div className="mt-1 flex flex-wrap items-start gap-x-4">
+        {event.assessment&&<details className="text-[11px] text-graphite"><summary className="min-h-8 w-fit cursor-pointer">{event.assessment.priority === "quiet" ? "Why filtered?" : "Why shown?"}</summary><p className="pb-2">{event.assessment.reason}</p></details>}
+        {onRate&&<button type="button" disabled={ratingBusy} onClick={async()=>{setRatingBusy(true);setRatingError(false);const ok=await onRate(event.id,event.assessment?.priority==="quiet"?"useful":"not_useful");setRatingError(!ok);setRatingBusy(false);}} className="min-h-8 text-[11px] font-medium text-graphite hover:text-ink disabled:opacity-50">{ratingBusy?"Saving…":event.assessment?.priority==="quiet"?"Keep this update":"Hide this update"}</button>}
+        </div>
         {ratingError&&<p role="status" className="text-[12px] text-graphite">Couldn’t save your preference. Try again.</p>}
       </div>
     </li>

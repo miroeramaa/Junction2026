@@ -17,7 +17,7 @@ function Unknown({ researched }: { researched: boolean }) {
   return <p className="text-[13px] text-graphite">{researched ? "No direct statement found" : "Research not captured yet"}</p>;
 }
 
-function Facts({ items, profile }: { items: ComparisonFact[]; profile?: ComparisonProfile | null }) {
+export function Facts({ items, profile }: { items: ComparisonFact[]; profile?: ComparisonProfile | null }) {
   if (!items.length || !profile) return <Unknown researched={!!profile} />;
   return (
     <>
@@ -57,7 +57,7 @@ export function Pricing({ competitor, card }: { competitor: Competitor; card?: B
   );
 }
 
-function Audience({ profile, compact = false }: { profile?: ComparisonProfile | null; compact?: boolean }) {
+export function Audience({ profile, compact = false }: { profile?: ComparisonProfile | null; compact?: boolean }) {
   if (profile?.target_customers.length) return <div><span className="mb-2 inline-flex rounded-full bg-canvas px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-graphite">Company-stated</span><Facts items={profile.target_customers} profile={profile} /></div>;
   const analysis = profile?.audience_analysis;
   if (!analysis?.segments.length || analysis.basis_captured_at !== profile?.captured_at) return <p className="text-[13px] text-graphite">{profile ? "Audience insight is ready to generate." : "Research this company to understand its audience."}</p>;
@@ -78,6 +78,7 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
   const [includeDemo, setIncludeDemo] = useState(false);
   const [category, setCategory] = useState("overview");
   const [profiles, setProfiles] = useState<Record<string, ComparisonProfile>>({});
+  const [audienceWarnings, setAudienceWarnings] = useState<Record<string, boolean>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState<{ done: number; total: number; name: string } | null>(null);
   const [message, setMessage] = useState("");
@@ -136,6 +137,7 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
             continue;
           }
           if (!data.profile) throw new Error("The server returned no profile.");
+          setAudienceWarnings(old => ({ ...old, [c.id]: data.warnings?.includes("audience_unavailable") ?? false }));
           setProfiles((old) => ({ ...old, [c.id]: data.profile }));
           onProfileSaved?.(c.id, data.profile);
           succeeded++;
@@ -153,14 +155,14 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
 
   const audienceGaps = shown.filter(c => { const p = profileFor(c.id); return p && !p.target_customers.length && !p.audience_analysis?.segments.length; });
   const categories = [{ id: "overview", label: "Overview" }, { id: "positioning", label: "Positioning" }, { id: "audience", label: "Audience" }, { id: "offering", label: "Offering" }, { id: "pricing", label: "Pricing" }, { id: "signals", label: "Signals" }];
-  const show = (name: string) => category === "overview" || category === name;
+  const show = (name: string) => category === name;
 
   if (loading) return <section aria-busy="true"><h2 className="text-2xl font-semibold">Competitor overview</h2><p role="status" className="mt-3 text-graphite">Loading your competitive landscape…</p></section>;
   return <section aria-labelledby="comparison-heading" className="min-w-0">
     <div className="flex flex-wrap items-start justify-between gap-5">
       <div><p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Competitive landscape</p><h2 id="comparison-heading" className="mt-1 text-3xl font-semibold tracking-tight">Competitor overview</h2><p className="mt-2 max-w-xl text-[14px] text-graphite">See where competitors focus, who they serve and what’s changing.</p></div>
       <div className="flex flex-wrap gap-2">
-        {!!audienceGaps.length && <button type="button" disabled={!!progress} onClick={() => { setCategory("audience"); research(audienceGaps, "audience"); }} className="min-h-11 rounded-lg border border-hairline bg-surface px-4 text-[12px] font-semibold disabled:opacity-50">Fill audience gaps ({audienceGaps.length})</button>}
+        {category === "audience" && !!audienceGaps.length && <button type="button" disabled={!!progress} onClick={() => { setCategory("audience"); research(audienceGaps, "audience"); }} className="min-h-11 rounded-lg border border-hairline bg-surface px-4 text-[12px] font-semibold disabled:opacity-50">Fill audience gaps ({audienceGaps.length})</button>}
         <button type="button" disabled={!!progress || !shown.length} onClick={() => research(missing.length ? missing : shown)} className="min-h-11 rounded-lg bg-ink px-4 text-[12px] font-semibold text-white disabled:opacity-50">{progress ? `Updating ${progress.done + 1} of ${progress.total}…` : missing.length ? `Research ${missing.length} companies` : "Refresh research"}</button>
       </div>
     </div>
@@ -178,7 +180,7 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
         const p = profileFor(c.id);
         const recent = recentCompetitorEvents(events.filter(e => e.competitor_id === c.id));
         const stale = profileNeedsRefresh(p, events.filter(e => e.competitor_id === c.id));
-        const broken = monitors.filter(m => m.competitor_id === c.id && (m.status.startsWith("error") || ["failed", "paused"].includes(m.status))).length;
+        const broken = monitors.filter(m => m.competitor_id === c.id && (m.status.startsWith("error") || m.status === "failed")).length;
         return <article key={c.id} aria-label={`${displayName(c)} profile`} className="relative flex min-w-0 flex-col rounded-xl border border-hairline bg-surface [overflow-wrap:anywhere]">
           <header className="flex items-center gap-3 border-b border-hairline px-5 py-4">
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-hairline bg-white">{c.logo_url ? <img src={c.logo_url} alt="" className="h-7 w-7 object-contain" /> : <span className="font-semibold">{displayName(c).slice(0,1)}</span>}</div>
@@ -186,12 +188,14 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
             <span className="text-[10px] text-muted">{p ? timeAgo(p.captured_at) : "New"}</span>
           </header>
           <div className="flex-1 space-y-5 p-5">
+            {audienceWarnings[c.id] && !errors[c.id] && <div className="rounded-lg bg-canvas p-3 text-[12px] text-graphite"><p role="status">Company research saved. The audience estimate couldn’t update.</p><button type="button" disabled={!!progress} onClick={() => research([c], "audience")} className="mt-1 min-h-9 font-semibold text-ink">Retry audience estimate</button></div>}
             {errors[c.id] && <div className="rounded-lg bg-canvas p-3 text-[12px] text-graphite"><p role="status">{p ? "Last update couldn't finish. Your saved research is still shown." : "Research couldn't finish just now. Please try again."}</p><button type="button" disabled={!!progress} onClick={() => research([c], retryActions.current[c.id] ?? "research")} className="mt-1 min-h-9 font-semibold text-ink">Retry {displayName(c)} update</button></div>}
+            {category === "overview" && <><Block title="Positioning"><p lang={p?.locale} dir="auto" className="text-[14px] leading-relaxed text-ink">{p?.positioning?.text ?? "Research this company to see its positioning."}</p></Block><Block title="Who they serve"><div className="text-[13px] leading-relaxed text-graphite">{p?.target_customers.length ? p.target_customers.slice(0, 3).map(f => f.text).join(" · ") : p?.audience_analysis?.basis_captured_at === p?.captured_at && p?.audience_analysis?.segments.length ? <><span className="mr-1 text-[10px] font-semibold uppercase">AI estimate</span>{p.audience_analysis.segments.slice(0, 3).map(s => s.label).join(" · ")}</> : "Explore the Audience view for more detail."}</div></Block><button type="button" onClick={() => onSelect(c.id)} className="min-h-10 text-[12px] font-semibold hover:underline">Explore company →</button></>}
             {show("positioning") && <Block title="Positioning"><Facts profile={p} items={p?.positioning ? [p.positioning] : []} /></Block>}
             {show("audience") && <Block title="Who they serve"><Audience profile={p} compact={category === "overview"} />{p && !p.target_customers.length && !p.audience_analysis?.segments.length && <button type="button" disabled={!!progress} onClick={() => research([c], "audience")} className="mt-2 min-h-9 text-[12px] font-semibold underline decoration-hairline underline-offset-4">Estimate {displayName(c)} audience</button>}</Block>}
             {show("offering") && <Block title="Products & services"><Facts profile={p} items={category === "overview" ? p?.capabilities.slice(0, 3) ?? [] : p?.capabilities ?? []} />{category === "overview" && (p?.capabilities.length ?? 0) > 3 && <button type="button" className="mt-1 min-h-9 text-[12px] font-medium text-graphite hover:text-ink" onClick={() => setCategory("offering")}>View all offerings →</button>}</Block>}
             {category === "pricing" && <Block title="Pricing & business model">{p?.pricing_model && <div className="mb-4"><Facts profile={p} items={[p.pricing_model]} /></div>}<Pricing competitor={c} card={cards[c.id]} /></Block>}
-            {(category === "signals" || category === "overview" && recent.length > 0) && <Block title="Recent signals">{recent.length ? <ul className="space-y-3">{recent.map(e => <li key={e.id} className="text-[13px]"><p className="mb-1 text-[10px] text-muted">{SIGNAL_LABEL[e.signal]} · {timeAgo(e.detected_at ?? e.received_at)}</p><Source url={e.url}>{e.title ?? e.summary ?? "Change detected"}</Source></li>)}</ul> : <p className="text-[13px] text-graphite">No recent changes detected.</p>}</Block>}
+            {(category === "signals") && <Block title="Recent signals">{recent.length ? <ul className="space-y-3">{recent.map(e => <li key={e.id} className="text-[13px]"><p className="mb-1 text-[10px] text-muted">{SIGNAL_LABEL[e.signal]} · {timeAgo(e.detected_at ?? e.received_at)}</p><Source url={e.url}>{e.title ?? e.summary ?? "Change detected"}</Source></li>)}</ul> : <p className="text-[13px] text-graphite">No recent changes detected.</p>}</Block>}
           </div>
           <footer className="flex flex-wrap items-center justify-between gap-2 border-t border-hairline px-5 py-3 text-[11px] text-graphite">
             <details><summary className="min-h-9 cursor-pointer content-center">{stale ? "Research may need updating" : "Research details"}</summary><div className="max-w-xs space-y-2 py-2"><p>{p ? `Updated ${timeAgo(p.captured_at)} · ${p.pages?.length ?? 1} company pages` : "Research not captured yet"}</p>{p?.locale && <p>Summary language: {comparisonLanguageName(p.locale)}</p>}{!!broken && <p>Some live sources need attention.</p>}{p?.warnings?.length ? <p>Some company pages were unavailable during the last update.</p> : null}<p>Sources show company statements. AI audience estimates are interpretations.</p></div></details>

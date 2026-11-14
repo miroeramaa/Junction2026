@@ -1,6 +1,7 @@
 // Browser-only read receipts and intercepted event fixtures; no database writes.
 async page => {
  const assert=(value,message)=>{if(!value)throw new Error(message);};
+ await page.setViewportSize({width:1440,height:1000});
  const initialUrl=page.url();const url=new URL(initialUrl);url.search='?view=matrix';
  const workspaceId=url.pathname.split('/').at(-1);
  const key=`kestrel:read-changes:${workspaceId}`;

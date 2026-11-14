@@ -6,6 +6,7 @@ import type { ComparisonProfile } from "../lib/comparison";
 // Real route + real Supabase client, with every HTTP request intercepted locally.
 // These checks never load .env, contact a service, change the real database or spend credits.
 test("comparison research route scope, storage and failure behavior", async (t) => {
+  t.mock.method(console, "warn", () => {});
   t.mock.method(console, "error", () => {}); // Expected failure cases still assert their response and write behavior.
   const workspaceId = "11111111-1111-4111-8111-111111111111";
   const competitorId = "22222222-2222-4222-8222-222222222222";
@@ -30,6 +31,7 @@ test("comparison research route scope, storage and failure behavior", async (t) 
   let fixtureMode = "normal";
   let cardBaseline: ComparisonProfile | null = null;
   let analysisCalls = 0;
+  let malformedAudience = false;
   let followupFails = false;
   const scrapedUrls: string[] = [];
 
@@ -53,6 +55,7 @@ test("comparison research route scope, storage and failure behavior", async (t) 
     }
     if (url.href === "https://api.context.dev/v1/web/answers") {
       analysisCalls++;
+      if (malformedAudience) return Response.json({json_content:{segments:[{label:"Invalid",reasoning:"No supplied evidence",evidence_ids:[999]}]}});
       return Response.json({ json_content: { segments: [{ label: "Research teams", reasoning: "The product provides tools for research teams.", evidence_ids: [0] }] }, sources: [] });
     }
     if (url.href === "https://api.context.dev/v1/web/scrape") {
@@ -208,6 +211,17 @@ test("comparison research route scope, storage and failure behavior", async (t) 
       raceOnSave = true;
       assert.equal((await request()).status, 409);
       raceOnSave = false;
+    });
+    await t.test("optional audience failure saves verified research and reports a quiet warning", async()=>{
+      malformedAudience=true;
+      const before=writes;
+      const response=await request();
+      assert.equal(response.status,200);
+      const body=await response.json();
+      assert.deepEqual(body.warnings,["audience_unavailable"]);
+      assert.equal(writes,before+1);
+      assert.equal(body.profile.positioning.text,"Research tools");
+      malformedAudience=false;
     });
   } finally {
     globalThis.fetch = originalFetch;

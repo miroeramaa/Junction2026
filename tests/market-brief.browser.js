@@ -15,7 +15,7 @@ async page=>{
  };
  await page.route('**/api/workspaces/*/brief**',handler);
  try{
-  await page.reload();await page.setViewportSize({width:1440,height:1000});
+  const url=new URL(page.url());url.search="?view=brief";await page.goto(url.toString());await page.setViewportSize({width:1440,height:1000});
   const panel=page.getByRole('region',{name:'Market brief',exact:true});
   await panel.getByRole('button',{name:'Generate brief',exact:true}).waitFor();
   assert(posts===0,'Viewing the dashboard must not generate or spend credits');
