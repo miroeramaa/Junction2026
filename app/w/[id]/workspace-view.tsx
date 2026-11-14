@@ -191,14 +191,14 @@ function TopBar({
 
   return (
     <header className="sticky top-0 z-20 border-b border-hairline bg-surface">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3 lg:px-6">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 sm:px-4 lg:px-6">
         <Link href="/" className="text-[13px] font-semibold text-graphite hover:text-ink">Competitor Radar</Link>
         <span className="h-5 w-px bg-hairline" aria-hidden />
         <div className="flex items-center gap-2">
           {workspace.logo_url && <img src={workspace.logo_url} alt="" className="h-6 w-6 rounded" />}
           <h1 className="text-[15px] font-semibold">{workspace.name}</h1>
         </div>
-        <p className="text-[13px] text-graphite" aria-live="polite">
+        <p className="min-w-0 flex-1 basis-full text-[12px] text-graphite sm:basis-auto sm:text-[13px]" aria-live="polite">
           {status}
           {failing > 0 && <span className="ml-2 text-critical">✕ {failing} sources can’t be read</span>}
         </p>
@@ -207,12 +207,12 @@ function TopBar({
             <div className="h-full bg-ink transition-[width]" style={{ width: `${(100 * health.checked) / Math.max(1, health.monitors.length)}%` }} />
           </div>
         )}
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 sm:gap-3">
           {health && (
             <button
               onClick={health.checkNow}
               disabled={health.checking}
-              className="rounded-md bg-ink px-3.5 py-1.5 text-[13px] font-semibold text-white disabled:opacity-60"
+              className="min-h-10 rounded-md bg-ink px-3 py-2 text-[13px] font-semibold text-white disabled:opacity-60 sm:min-h-0 sm:px-3.5 sm:py-1.5"
             >
               {health.checking ? "Checking…" : "Check now"}
             </button>

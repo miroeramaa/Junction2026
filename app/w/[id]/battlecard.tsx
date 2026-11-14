@@ -132,19 +132,19 @@ export function BattlecardView({
         </div>
       </header>
 
-      <div className="mt-6 grid items-start gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
+      <div className="mt-4 grid min-w-0 items-start gap-3 sm:mt-6 sm:gap-4 xl:grid-cols-[minmax(0,26rem)_minmax(0,1fr)]">
         <Panel
           title="Pricing now"
           note={card?.pricing ? `Read from the pricing page ${timeAgo(card.pricing.captured_at)}.` : "Reading the pricing page…"}
         >
           {plans.length ? (
             <>
-              <table className="w-full text-[13px]">
+              <table className="w-full table-fixed text-[12px] sm:text-[13px]">
                 <thead className="text-[12px] text-muted">
                   <tr>
-                    <th className="py-1 text-left font-normal">Plan</th>
-                    <th className="py-1 text-right font-normal">Billed monthly</th>
-                    {showYearly && <th className="py-1 text-right font-normal">Billed yearly</th>}
+                    <th className="w-[34%] py-1 text-left font-normal">Plan</th>
+                    <th className="py-1 text-right font-normal">Monthly</th>
+                    {showYearly && <th className="py-1 text-right font-normal">Yearly</th>}
                   </tr>
                 </thead>
                 <tbody>
@@ -152,7 +152,7 @@ export function BattlecardView({
                     const ch = changes.get(planKey(p.name));
                     return (
                       <tr key={p.name} className="border-t border-hairline">
-                        <td className="py-2 pr-2">
+                        <td className="break-words py-2 pr-1 sm:pr-2">
                           {ch?.added ? <span className="inserted">{p.name}</span> : p.name}
                           {ch?.added && <span className="ml-1.5 text-[11px] text-inserted">new plan</span>}
                           {p.limits[0] && <span className="block text-[12px] text-muted">{p.limits[0]}</span>}

@@ -70,7 +70,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
         </ul>
       </nav>
 
-      <main className="min-w-0 flex-1 px-4 py-6 lg:px-8">
+      <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-6 lg:px-8">
         {current ? (
           <BattlecardView
             key={current.id}
@@ -157,7 +157,7 @@ function Overview({
   const since = competitors.map((c) => c.created_at).sort()[0];
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[minmax(0,1fr)_26rem]">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_26rem] xl:gap-8">
       <section aria-labelledby="changes-h">
         <h2 id="changes-h" className="text-xl font-semibold tracking-tight">Changes</h2>
         <p className="mt-1 text-[13px] text-graphite">Everything your competitors changed since we started watching {timeAgo(since)}.</p>
@@ -186,12 +186,12 @@ function Overview({
         <h2 id="glance-h" className="text-xl font-semibold tracking-tight">Pricing at a glance</h2>
         <p className="mt-1 text-[13px] text-graphite">Cheapest paid plan, read from each pricing page.</p>
         <div className="mt-4 overflow-hidden rounded-lg border border-hairline bg-surface">
-          <table className="w-full text-left text-[13px]">
+          <table className="w-full table-fixed text-left text-[12px] sm:text-[13px]">
             <thead className="border-b border-hairline text-[12px] text-muted">
               <tr>
-                <th className="px-4 py-2 font-normal">Competitor</th>
-                <th className="px-2 py-2 font-normal">Entry plan</th>
-                <th className="px-4 py-2 text-right font-normal">Per month</th>
+                <th className="w-[38%] px-3 py-2 font-normal sm:px-4">Competitor</th>
+                <th className="w-[30%] px-2 py-2 font-normal">Entry plan</th>
+                <th className="w-[32%] px-3 py-2 text-right font-normal sm:px-4">Per month</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-hairline">
@@ -200,12 +200,12 @@ function Overview({
                 const lastPricing = (byCompetitor[c.id] ?? []).find((e) => e.signal === "pricing");
                 return (
                   <tr key={c.id} className="cursor-pointer hover:bg-canvas/60" onClick={() => onSelect(c.id)}>
-                    <td className="px-4 py-2.5">
+                    <td className="break-words px-3 py-2.5 sm:px-4">
                       <span className="font-semibold">{displayName(c)}</span>
                       {lastPricing && <span className="block text-[12px] text-redline">Pricing changed {timeAgo(eventTime(lastPricing))}</span>}
                     </td>
-                    <td className="px-2 py-2.5 text-graphite">{entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}</td>
-                    <td className="tabular px-4 py-2.5 text-right font-semibold">
+                    <td className="break-words px-2 py-2.5 text-graphite">{entry ? entry.plan.name : cards[c.id]?.pricing ? "No paid plan listed" : "Reading…"}</td>
+                    <td className="tabular whitespace-nowrap px-3 py-2.5 text-right font-semibold sm:px-4">
                       {entry ? formatUsd(entry.value) : "–"}
                       {entry?.basis === "yearly" && <span className="block text-[11px] font-normal text-muted">billed yearly</span>}
                     </td>
