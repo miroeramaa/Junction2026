@@ -2,6 +2,7 @@
 
 // A change, shown as a tracked change: removed text struck in red, added text underlined.
 
+import { useState } from "react";
 import { displayName, SIGNAL_LABEL, type Competitor, type EventRow } from "@/lib/types";
 import { clock, timeAgo } from "@/lib/time";
 import { hostOf, SourceLink } from "./source";
@@ -44,13 +45,17 @@ export function ChangeItem({
   fresh,
   showCompetitor = true,
   onSelectCompetitor,
+  onRate,
 }: {
   event: EventRow;
   competitor?: Competitor;
   fresh?: boolean;
   showCompetitor?: boolean;
   onSelectCompetitor?: (id: string) => void;
+  onRate?: (id:string,rating:"useful"|"not_useful")=>Promise<boolean>;
 }) {
+  const [ratingBusy,setRatingBusy]=useState(false);
+  const [ratingError,setRatingError]=useState(false);
   const at = event.detected_at ?? event.received_at;
   const added = event.added_urls ?? [];
   const matched = event.signal === "news" ? (event.matched_urls ?? []) : [];
@@ -73,6 +78,7 @@ export function ChangeItem({
           {showCompetitor && competitor ? SIGNAL_LABEL[event.signal].toLowerCase() : SIGNAL_LABEL[event.signal]}
           {event.importance === "high" && <span className="ml-2 font-semibold text-redline">Important</span>}
         </p>
+        {event.assessment && <p className="mt-1 text-[11px] text-graphite">{event.assessment.priority === "quiet" ? "Filtered" : event.assessment.priority === "high" ? "High priority" : "Signal"} · {event.assessment.reason}</p>}
         <p className="mt-0.5 font-semibold">{title}</p>
         {event.summary && event.signal !== "launches" && <p className="mt-0.5 text-graphite">{event.summary}</p>}
         {added.length > 0 && (
@@ -105,6 +111,8 @@ export function ChangeItem({
           )}
           <span>{lat ? `Battlecard updated ${lat} after detection` : event.processed_at ? `Detected ${timeAgo(at)}` : "Updating battlecard…"}</span>
         </p>
+        {onRate&&<button type="button" disabled={ratingBusy} onClick={async()=>{setRatingBusy(true);setRatingError(false);const ok=await onRate(event.id,event.assessment?.priority==="quiet"?"useful":"not_useful");setRatingError(!ok);setRatingBusy(false);}} className="mt-1 min-h-10 text-[11px] font-medium text-graphite hover:text-ink disabled:opacity-50">{ratingBusy?"Saving…":event.assessment?.priority==="quiet"?"Keep this update":"Hide this update"}</button>}
+        {ratingError&&<p role="status" className="text-[12px] text-graphite">Couldn’t save your preference. Try again.</p>}
       </div>
     </li>
   );

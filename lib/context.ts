@@ -160,6 +160,7 @@ export type Monitor = {
   status: string;
   next_run_at: string | null;
   webhook?: { url: string; secret?: string } | null;
+  target?: MonitorTarget;
 };
 
 export async function createMonitor(opts: {
@@ -177,12 +178,14 @@ export async function createMonitor(opts: {
     ...(opts.webhookUrl
       ? { webhook: { url: opts.webhookUrl, events: ["change.detected", "run.completed"], retry: {} } }
       : {}),
-  });
+  }, { maxRateLimitRetries: 0, timeoutMs: 25000 });
 }
 
-export const getMonitor = (id: string) => call<Monitor & { baseline: unknown }>("GET", `/monitors/${id}`);
+export const getMonitor = (id: string) => call<Monitor & { baseline: unknown }>("GET", `/monitors/${id}`, undefined, { maxRateLimitRetries: 0, timeoutMs: 15000 });
 export const updateMonitorSchedule = (id: string, schedule: Schedule) => call<Monitor>("PATCH", `/monitors/${id}`, { schedule });
-export const deleteMonitor = (id: string) => call<unknown>("DELETE", `/monitors/${id}`);
+export const updateMonitor = (id: string, patch: { status?: "active" | "paused"; target?: MonitorTarget; change_detection?: { type: "semantic" | "exact" } }) =>
+  call<Monitor>("PATCH", `/monitors/${encodeURIComponent(id)}`, patch, { maxRateLimitRetries: 0, timeoutMs: 20000 });
+export const deleteMonitor = (id: string) => call<unknown>("DELETE", `/monitors/${id}`, undefined, { maxRateLimitRetries: 0, timeoutMs: 15000 });
 export const runMonitorNow = (id: string) =>
   call<{ monitor_id: string; run_id: string; queued: boolean }>("POST", `/monitors/${id}/run`);
 

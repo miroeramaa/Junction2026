@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { db, must } from "./db";
 import { answer } from "./context";
+import { loadFeedback } from "./signal-feedback";
 import { comparisonLocale } from "./comparison";
 import { BRIEF_PROMPT_VERSION, buildBriefTask, selectBriefEvidence, validateBriefOutput, type BriefRow, type MarketBrief } from "./market-brief";
 import type { Competitor, EventRow, Workspace } from "./types";
@@ -13,7 +14,7 @@ async function inputs(workspaceId: string, locale: string) {
   const competitors = must(await db().from("competitors").select("*").eq("workspace_id",workspaceId)) as Competitor[];
   const ids = competitors.filter(c => c.confirmed && !c.is_sandbox).map(c => c.id);
   const events = ids.length ? must(await db().from("events").select("id,competitor_id,signal,title,summary,importance,url,diff,detected_at,received_at,processed_at").in("competitor_id",ids).gte("received_at",new Date(Date.now()-31*86400000).toISOString()).order("received_at",{ascending:false}).limit(300)) as EventRow[] : [];
-  const evidence = selectBriefEvidence(workspace,competitors,events);
+  const evidence = selectBriefEvidence(workspace,competitors,events,Date.now(),await loadFeedback(events.map(event => event.id)));
   const fingerprint = createHash("sha256").update(JSON.stringify({ version:BRIEF_PROMPT_VERSION,company:{ name:workspace.name,description:workspace.description,domain:workspace.domain },locale,evidence })).digest("hex");
   return {workspace,evidence,fingerprint};
 }
@@ -23,7 +24,9 @@ export async function getMarketBrief(workspaceId: string, locale: string) {
   if (row.error) throw new BriefUnavailable("storage");
   const current = row.data as BriefRow | null;
   const source = await inputs(workspaceId,locale);
-  return { row:current, eligible_events:source.evidence.length, stale:!!current?.content && current.input_fingerprint !== source.fingerprint, can_generate:source.evidence.some(event=>event.importance === "high") || source.evidence.some(event=>source.evidence.some(other=>other.competitor_id===event.competitor_id && other.url!==event.url)), locale };
+  const allowed = new Set(source.evidence.map(event=>event.id));
+  const visibleCurrent = current?.content ? { ...current, content: { ...current.content, insights: current.content.insights.filter(insight=>insight.evidence.every(event=>allowed.has(event.id))) } } : current;
+  return { row:visibleCurrent, eligible_events:source.evidence.length, stale:!!current?.content && current.input_fingerprint !== source.fingerprint, can_generate:source.evidence.some(event=>event.importance === "high") || source.evidence.some(event=>source.evidence.some(other=>other.competitor_id===event.competitor_id && other.url!==event.url)), locale };
 }
 
 export async function refreshMarketBrief(workspaceId: string, requestedLocale = "en", automatic = false) {

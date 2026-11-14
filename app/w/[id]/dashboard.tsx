@@ -13,6 +13,8 @@ import type { ComparisonProfile } from "@/lib/comparison";
 import { sourceLabel } from "./source";
 import { WorkspaceTools } from "./workspace-tools";
 import { MarketBriefPanel } from "./market-brief";
+import { ManageCompetitors } from "./manage-competitors";
+import { triageSignals, type Feedback } from "@/lib/signals";
 import { useReadChanges } from "./use-read-changes";
 
 type Props = {
@@ -23,27 +25,51 @@ type Props = {
   fresh: Set<string>;
   monitors: MonitorStatus[];
   dataLoading?: boolean;
+  onControlsChanged: () => void;
   onProfileSaved?: (id: string, profile: ComparisonProfile) => void;
 };
 
 const eventTime = (e: EventRow) => e.detected_at ?? e.received_at;
 
-export function Dashboard({ workspace, competitors, cards, events, fresh, monitors, dataLoading, onProfileSaved }: Props) {
+export function Dashboard({ workspace, competitors, cards, events, fresh, monitors, dataLoading, onProfileSaved, onControlsChanged }: Props) {
   const [selected, setSelected] = useState<string | null>(null);
-  const [view, setView] = useState<"matrix" | "changes">("matrix");
+  const [view, setView] = useState<"matrix" | "changes" | "manage">("matrix");
 
+  const [filter,setFilter] = useState<"important"|"all">("important");
+  const [feedback,setFeedback] = useState<Feedback>({});
+  const [feedbackError,setFeedbackError] = useState(false);
+  useEffect(()=>{
+    const controller=new AbortController();
+    fetch(`/api/workspaces/${workspace.id}/events/feedback`,{signal:controller.signal}).then(async response=>{
+      if(!response.ok)throw new Error("feedback");
+      const result=await response.json();if(!controller.signal.aborted){setFeedback(old=>({...result.feedback,...old}));setFeedbackError(false);}
+    }).catch(()=>{if(!controller.signal.aborted)setFeedbackError(true);});
+    return ()=>controller.abort();
+  },[workspace.id]);
+  async function rate(eventId:string,rating:NonNullable<Feedback[string]>):Promise<boolean> {
+    try {
+      const response=await fetch(`/api/workspaces/${workspace.id}/events/${eventId}/feedback`,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify({rating})});
+      if(!response.ok)return false;
+      setFeedback(old=>({...old,[eventId]:rating}));return true;
+    }catch{return false;}
+  }
+  const assessed=useMemo(()=>triageSignals(events.filter(event=>competitors.some(c=>c.id===event.competitor_id)),feedback),[events,competitors,feedback]);
+  const visibleEvents=useMemo(()=>filter==="all"?assessed:assessed.filter(event=>event.assessment.priority!=="quiet"),[assessed,filter]);
+  const scope=selected?assessed.filter(event=>event.competitor_id===selected):assessed;
+  const quietCount=scope.filter(event=>event.assessment.priority==="quiet").length;
   // Remember the selection in the URL so a refresh (or a teammate) lands on the same view.
   useEffect(() => {
     const restore = () => {
       const params = new URLSearchParams(window.location.search);
       setSelected(params.get("c"));
-      setView(params.get("view") === "changes" ? "changes" : "matrix");
+      setView(params.get("view") === "manage" ? "manage" : params.get("view") === "changes" ? "changes" : "matrix");
+      setFilter(params.get("signals") === "all" ? "all" : "important");
     };
     restore();
     window.addEventListener("popstate", restore);
     return () => window.removeEventListener("popstate", restore);
   }, []);
-  const select = (id: string | null, nextView = view) => {
+  const select = (id: string | null, nextView: "matrix" | "changes" | "manage" = view === "manage" ? "matrix" : view) => {
     setSelected(id);
     setView(nextView);
     const url = new URL(window.location.href);
@@ -55,13 +81,13 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
 
   const byCompetitor = useMemo(() => {
     const m: Record<string, EventRow[]> = {};
-    for (const e of events) (m[e.competitor_id] ??= []).push(e);
+    for (const e of visibleEvents) (m[e.competitor_id] ??= []).push(e);
     return m;
-  }, [events]);
+  }, [visibleEvents]);
 
   const current = competitors.find((c) => c.id === selected);
-  const isUnread = useReadChanges(workspace.id, events, current?.id ?? null, !selected && view === "changes", !!dataLoading);
-  const unreadCount = events.filter(isUnread).length;
+  const isUnread = useReadChanges(workspace.id, visibleEvents, current?.id ?? null, !selected && view === "changes", !!dataLoading);
+  const unreadCount = visibleEvents.filter(isUnread).length;
   const names = Object.fromEntries(competitors.map((c) => [c.id, displayName(c)]));
 
   return (
@@ -70,6 +96,7 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
         <ul className="flex gap-1 overflow-x-auto p-2 [scrollbar-width:thin] lg:flex-col lg:overflow-visible">
           <RailItem active={!selected && view === "matrix"} onClick={() => select(null, "matrix")} label="Competitor overview" count={0} />
           <RailItem active={!selected && view === "changes"} onClick={() => select(null, "changes")} label="All changes" count={unreadCount} />
+          <RailItem active={!selected && view === "manage"} onClick={() => select(null, "manage")} label="Manage watchlist" count={0} />
           <li className="hidden px-3 pt-4 pb-1 text-[12px] text-muted lg:block">Competitors</li>
           {competitors.map((c) => {
             const list = byCompetitor[c.id] ?? [];
@@ -90,21 +117,26 @@ export function Dashboard({ workspace, competitors, cards, events, fresh, monito
       </nav>
 
       <main className="min-w-0 flex-1 px-3 py-4 sm:px-4 sm:py-6 lg:px-8">
-        <WorkspaceTools workspaceId={workspace.id} events={events} names={names} monitors={monitors} />
-        {!current && <MarketBriefPanel key={workspace.id} workspaceId={workspace.id} companyName={workspace.name} eventVersion={events.map(event => `${event.id}:${event.processed_at ?? ""}`).join("|")} loading={dataLoading} />}
-        {current ? (
+        <WorkspaceTools workspaceId={workspace.id} events={assessed} names={names} monitors={monitors} feedback={feedback} onFeedbackSaved={(id,rating)=>setFeedback(old=>({...old,[id]:rating}))} />
+        {!current && view !== "manage" && <MarketBriefPanel key={workspace.id} workspaceId={workspace.id} companyName={workspace.name} eventVersion={events.map(event => `${event.id}:${event.processed_at ?? ""}`).join("|") + JSON.stringify(feedback)} loading={dataLoading} />}
+        {view !== "manage" && <section aria-label="Signal filtering" className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-hairline bg-surface p-3">
+          <div><p className="text-[12px] font-semibold">Focus on meaningful changes</p><p className="mt-1 text-[11px] text-graphite">{quietCount ? `${quietCount} routine, repeated or hidden updates ${filter==="all"?"included":"filtered out"}.` : "Noise is filtered without deleting captured history."}{feedbackError?" Team preferences couldn’t load; basic filtering is still active.":""}</p></div>
+          <div role="group" aria-label="Changes shown" className="flex rounded-lg bg-canvas p-1">{(["important","all"] as const).map(mode=><button key={mode} type="button" aria-pressed={filter===mode} onClick={()=>{setFilter(mode);const url=new URL(location.href);if(mode==="all")url.searchParams.set("signals","all");else url.searchParams.delete("signals");history.replaceState(null,"",url);}} className="min-h-10 rounded-md px-3 text-[12px] font-medium aria-pressed:bg-ink aria-pressed:text-white">{mode==="important"?"Important":"All changes"}</button>)}</div>
+        </section>}
+        {view === "manage" && !current ? <ManageCompetitors workspaceId={workspace.id} competitors={competitors} monitors={monitors} onChanged={onControlsChanged} /> : current ? (
           <BattlecardView
             key={current.id}
             competitor={current}
             card={cards[current.id]}
             events={byCompetitor[current.id] ?? []}
             fresh={fresh}
+            onRate={rate}
             monitors={monitors.filter((m) => m.competitor_id === current.id)}
           />
         ) : view === "matrix" ? (
-          <ComparisonMatrix workspaceId={workspace.id} competitors={competitors} cards={cards} events={events} monitors={monitors} onSelect={select} loading={dataLoading} onProfileSaved={onProfileSaved} />
+          <ComparisonMatrix workspaceId={workspace.id} competitors={competitors} cards={cards} events={visibleEvents} monitors={monitors} onSelect={select} loading={dataLoading} onProfileSaved={onProfileSaved} />
         ) : (
-          <Overview workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} onSelect={select} byCompetitor={byCompetitor} />
+          <Overview workspace={workspace} competitors={competitors} cards={cards} events={visibleEvents} fresh={fresh} onSelect={select} byCompetitor={byCompetitor} onRate={rate} />
         )}
       </main>
     </div>
@@ -158,6 +190,7 @@ function Overview({
   fresh,
   onSelect,
   byCompetitor,
+  onRate,
 }: {
   workspace: Workspace;
   competitors: Competitor[];
@@ -166,11 +199,12 @@ function Overview({
   fresh: Set<string>;
   onSelect: (id: string) => void;
   byCompetitor: Record<string, EventRow[]>;
+  onRate: (eventId:string,rating:NonNullable<Feedback[string]>)=>Promise<boolean>;
 }) {
   const byId = Object.fromEntries(competitors.map((c) => [c.id, c]));
   const groups = useMemo(() => {
     const g: { day: string; items: EventRow[] }[] = [];
-    for (const e of [...events].sort((a, b) => eventTime(b).localeCompare(eventTime(a)))) {
+    for (const e of [...events].sort((a, b) => dayLabel(eventTime(b)) === dayLabel(eventTime(a)) ? Number(b.assessment?.priority === "high") - Number(a.assessment?.priority === "high") || eventTime(b).localeCompare(eventTime(a)) : eventTime(b).localeCompare(eventTime(a)))) {
       const day = dayLabel(eventTime(e));
       if (g.at(-1)?.day === day) g.at(-1)!.items.push(e);
       else g.push({ day, items: [e] });
@@ -186,9 +220,9 @@ function Overview({
         <p className="mt-1 text-[13px] text-graphite">Everything your competitors changed since we started watching {timeAgo(since)}.</p>
         {groups.length === 0 ? (
           <div className="mt-4 rounded-lg border border-dashed border-hairline bg-surface px-5 py-8">
-            <p className="font-semibold">Nothing has changed yet</p>
+            <p className="font-semibold">No changes in this view</p>
             <p className="mt-1 max-w-prose text-graphite">
-              Pricing pages are checked every 15 minutes and everything else every hour. Use Check now to look right away.
+              Try All changes to include filtered updates, or use Check now to look for new developments.
             </p>
           </div>
         ) : (
@@ -197,7 +231,7 @@ function Overview({
               <h3 className="mb-2 text-[13px] font-semibold text-graphite">{g.day}</h3>
               <ul className="divide-y divide-hairline overflow-hidden rounded-lg border border-hairline bg-surface">
                 {g.items.map((e) => (
-                  <ChangeItem key={e.id} event={e} competitor={byId[e.competitor_id]} fresh={fresh.has(e.id)} onSelectCompetitor={onSelect} />
+                  <ChangeItem key={e.id} event={e} competitor={byId[e.competitor_id]} fresh={fresh.has(e.id)} onSelectCompetitor={onSelect} onRate={onRate} />
                 ))}
               </ul>
             </div>

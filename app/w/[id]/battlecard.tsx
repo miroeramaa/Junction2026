@@ -104,12 +104,14 @@ export function BattlecardView({
   card,
   events,
   fresh,
+  onRate,
   monitors,
 }: {
   competitor: Competitor;
   card?: Battlecard;
   events: EventRow[];
   fresh: Set<string>;
+  onRate?: (id:string,rating:"useful"|"not_useful")=>Promise<boolean>;
   monitors: MonitorStatus[];
 }) {
   const snaps = usePricingSnapshots(c.id, card?.pricing?.captured_at);
@@ -243,7 +245,7 @@ export function BattlecardView({
           {events.length ? (
             <ul className="divide-y divide-hairline border-t border-hairline">
               {events.map((e) => (
-                <ChangeItem key={e.id} event={e} fresh={fresh.has(e.id)} showCompetitor={false} />
+                <ChangeItem key={e.id} event={e} fresh={fresh.has(e.id)} showCompetitor={false} onRate={onRate} />
               ))}
             </ul>
           ) : (

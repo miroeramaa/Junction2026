@@ -23,6 +23,7 @@ test("market brief routes preserve cache, scope, cost bounds and failure behavio
   const object=req.headers.get("accept")?.includes("vnd.pgrst.object");
   const respond=(data:unknown|null)=>Response.json(object?data:data?[data]:[]);
   if(url.hostname==="database.example.com"){
+   if(url.pathname.endsWith("/event_feedback"))return Response.json([]);
    if(url.pathname.endsWith("/workspaces")){assert.equal(url.searchParams.get("id"),`eq.${workspaceId}`);return respond({id:workspaceId,name:"Our company",domain:"ours.test",description:"Furniture for homes"});}
    if(url.pathname.endsWith("/competitors")){assert.equal(url.searchParams.get("workspace_id"),`eq.${workspaceId}`);return Response.json([{id:competitorId,workspace_id:workspaceId,name:"Competitor",confirmed:true,is_sandbox:false}]);}
    if(url.pathname.endsWith("/events")){assert.equal(url.searchParams.get("competitor_id"),`in.(${competitorId})`);return Response.json(stableEvents);}

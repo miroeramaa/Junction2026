@@ -47,6 +47,7 @@ export type EventRow = {
   received_at: string;
   processed_at: string | null;
   battlecard_updated_at: string | null;
+  assessment?: import("./signals").SignalAssessment; // computed view metadata; not a database column
   added_urls?: string[] | null; // sitemap changes, selected from raw
   matched_urls?: string[] | null; // search changes (press), selected from raw
 };
@@ -85,6 +86,8 @@ export type MonitorStatus = {
   status: string;
   last_run_at: string | null;
   url: string | null; // the page being watched; null for search monitors
+  query?: string | null;
+  target_type?: "page" | "sitemap" | "search";
 };
 
 /** User-facing names: what is being watched, not how. */

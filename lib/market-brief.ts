@@ -1,5 +1,6 @@
 // Pure input selection and output validation, shared by the generator and tests.
 import { z } from "zod";
+import { triageSignals, type Feedback } from "./signals";
 import { safeSourceUrl } from "./comparison";
 import type { Competitor, EventRow, Workspace } from "./types";
 
@@ -23,11 +24,11 @@ export function meaningfulBriefEvent(event: Pick<EventRow, "importance" | "title
   return (event.importance === "medium" || event.importance === "high") && !!safeSourceUrl(event.url) && !!(event.title?.trim() || event.summary?.trim());
 }
 
-export function selectBriefEvidence(workspace: Workspace, competitors: Competitor[], events: EventRow[], now = Date.now()): BriefEvidence[] {
+export function selectBriefEvidence(workspace: Workspace, competitors: Competitor[], events: EventRow[], now = Date.now(), feedback: Feedback = {}): BriefEvidence[] {
   const allowed = new Map(competitors.filter(c => c.workspace_id === workspace.id && c.confirmed && !c.is_sandbox).map(c => [c.id, c]));
   const start = now - 30 * 86400000;
   const seen = new Set<string>();
-  return [...events].sort((a,b) => Date.parse(b.detected_at ?? b.received_at) - Date.parse(a.detected_at ?? a.received_at)).flatMap(event => {
+  return triageSignals(events, feedback).filter(event => event.assessment.priority !== "quiet").sort((a,b) => Date.parse(b.detected_at ?? b.received_at) - Date.parse(a.detected_at ?? a.received_at)).flatMap(event => {
     const competitor = allowed.get(event.competitor_id);
     const at = event.detected_at ?? event.received_at;
     const timestamp = Date.parse(at);

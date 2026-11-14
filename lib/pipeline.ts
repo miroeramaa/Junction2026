@@ -6,6 +6,8 @@ import { scrapePricing, timestampToIso, type Plan } from "./pricing";
 import { listBatchResults } from "./context";
 import { refreshHowToWin } from "./how-to-win";
 import type { Battlecard, Competitor, EventRow, FeedItem } from "./types";
+import { assessSignal, triageSignals } from "./signals";
+import { loadFeedback } from "./signal-feedback";
 import { meaningfulBriefEvent } from "./market-brief";
 import { refreshMarketBriefAfterEvent } from "./market-brief-service";
 
@@ -54,6 +56,19 @@ export async function processEvent(eventId: string) {
   const ev = must(await db().from("events").select("*, raw").eq("id", eventId).single()) as EventRow & {
     raw: { data: { change: Change } };
   };
+  const captured = { ...ev, added_urls: ev.raw.data.change.added_urls };
+  let assessment = assessSignal(captured);
+  if (assessment.priority !== "quiet") {
+    const recent = must(await db().from("events").select("id,competitor_id,signal,title,summary,diff,importance,url,received_at,detected_at,added_urls:raw->data->change->added_urls").eq("competitor_id",ev.competitor_id).gte("received_at",new Date(Date.now()-48*3600000).toISOString()).order("received_at",{ascending:false}).limit(100)) as unknown as EventRow[];
+    const candidates = [captured,...recent.filter(event=>event.id!==ev.id)];
+    // Feedback storage is optional for older installations; basic noise/duplicate filtering still works.
+    const feedback = await loadFeedback(candidates.map(event=>event.id)).catch(()=>({}));
+    assessment = triageSignals(candidates,feedback).find(event=>event.id===ev.id)!.assessment;
+  }
+  if (assessment.priority === "quiet") {
+    must(await db().from("events").update({ processed_at: new Date().toISOString() }).eq("id", ev.id));
+    return; // Keep the captured event, but do not spend credits updating cards for website noise.
+  }
   const competitor = must(await db().from("competitors").select("*").eq("id", ev.competitor_id).single()) as Competitor;
   const card = must(await db().from("battlecards").select("*").eq("competitor_id", ev.competitor_id).single()) as Battlecard;
   const change = ev.raw.data.change;

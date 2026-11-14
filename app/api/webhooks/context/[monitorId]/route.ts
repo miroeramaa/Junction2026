@@ -17,7 +17,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ monitor
 
   const { data: monitor } = await db()
     .from("monitors")
-    .select("id, competitor_id, signal, context_monitor_id, webhook_secret")
+    .select("id, competitor_id, signal, context_monitor_id, webhook_secret, status")
     .eq("id", monitorId)
     .maybeSingle();
   if (!monitor?.webhook_secret) return new Response("unknown monitor", { status: 404 });
@@ -28,9 +28,11 @@ export async function POST(req: Request, { params }: { params: Promise<{ monitor
   const event = JSON.parse(raw.toString("utf8")) as Envelope;
   if (event.id !== req.headers.get("x-context-id")) return new Response("bad envelope", { status: 400 });
 
+  if (["paused", "updating", "deleting"].includes(monitor.status) || monitor.status?.startsWith("error:")) return new Response(null, { status: 204 });
+
   if (event.event === "run.completed") {
     // Heartbeat: lets the UI show "checked 2 min ago" and that a sweep finished. Changes arrive via change.detected.
-    await db().from("monitors").update({ status: "active", last_run_at: event.data.run?.completed_at ?? new Date().toISOString() }).eq("id", monitorId);
+    await db().from("monitors").update({ status: "active", last_run_at: event.data.run?.completed_at ?? new Date().toISOString() }).eq("id", monitorId).in("status", ["active", "baseline", "pending", "failed"]);
     return new Response(null, { status: 204 });
   }
 

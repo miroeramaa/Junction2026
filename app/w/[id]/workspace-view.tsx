@@ -80,7 +80,11 @@ function useWorkspace(id: string) {
         if (prev.status !== (p.new as Workspace).status) load();
       })
       .on("postgres_changes", { event: "*", schema: "public", table: "competitors", filter: `workspace_id=eq.${id}` }, (p) => {
-        if (p.eventType === "DELETE") return setCompetitors((l) => l.filter((c) => c.id !== (p.old as Row).id));
+        if (p.eventType === "DELETE") {
+          const removed=(p.old as Row).id;compIds.delete(removed);
+          setEvents(rows=>rows.filter(event=>event.competitor_id!==removed));
+          setCompetitors(rows=>rows.filter(c=>c.id!==removed));return;
+        }
         const c = p.new as Competitor;
         compIds.add(c.id);
         setCompetitors((l) => [...upsert(l, c)].sort((a, b) => a.created_at.localeCompare(b.created_at)));
@@ -120,8 +124,10 @@ function useMonitors(id: string, active: boolean) {
   const [checkStartedAt, setCheckStartedAt] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
-    const res = await fetch(`/api/workspaces/${id}/monitors`);
-    if (res.ok) setMonitors(await res.json());
+    try {
+      const res = await fetch(`/api/workspaces/${id}/monitors`);
+      if (res.ok) setMonitors(await res.json());
+    } catch { /* Keep the last known health; the next poll retries. */ }
   }, [id]);
 
   useEffect(() => {
@@ -131,8 +137,9 @@ function useMonitors(id: string, active: boolean) {
     return () => clearInterval(t);
   }, [active, refresh, checkStartedAt]);
 
-  const checked = checkStartedAt ? monitors.filter((m) => m.last_run_at && Date.parse(m.last_run_at) >= checkStartedAt - 2000).length : 0;
-  const checking = checkStartedAt != null && checked < monitors.length && Date.now() - checkStartedAt < 120_000;
+  const activeMonitors = monitors.filter(m=>["active","baseline","failed"].includes(m.status));
+  const checked = checkStartedAt ? activeMonitors.filter((m) => m.last_run_at && Date.parse(m.last_run_at) >= checkStartedAt - 2000).length : 0;
+  const checking = checkStartedAt != null && checked < activeMonitors.length && Date.now() - checkStartedAt < 120_000;
 
   useEffect(() => {
     if (checkStartedAt && !checking) {
@@ -147,7 +154,7 @@ function useMonitors(id: string, active: boolean) {
     if (res.ok) setCheckStartedAt(started);
   }
 
-  return { monitors, checkNow, checkStartedAt, checked, checking };
+  return { monitors, activeMonitors, refresh, checkNow, checkStartedAt, checked, checking };
 }
 
 export function WorkspaceView({ id }: { id: string }) {
@@ -182,7 +189,7 @@ export function WorkspaceView({ id }: { id: string }) {
         </main>
       )}
       {(workspace.status === "discovering" || workspace.status === "review") && <Review workspace={workspace} competitors={competitors} />}
-      {watching && <Dashboard workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} monitors={health.monitors} dataLoading={detailsLoading} onProfileSaved={saveProfile} />}
+      {watching && <Dashboard key={workspace.id} workspace={workspace} competitors={competitors} cards={cards} events={events} fresh={fresh} monitors={health.monitors} dataLoading={detailsLoading} onProfileSaved={saveProfile} onControlsChanged={()=>{retry();void health.refresh();}} />}
     </div>
   );
 }
@@ -205,11 +212,11 @@ function TopBar({
   if (workspace.status === "discovering") status = workspace.status_detail ?? "Finding competitors…";
   else if (workspace.status === "review") status = "Choose which competitors to watch.";
   else if (!health) status = "";
-  else if (health.checking) status = `Checking now: ${health.checked} of ${health.monitors.length} sources done.`;
-  else if (health.checkStartedAt) status = `Checked all ${health.monitors.length} sources.`;
+  else if (health.checking) status = `Checking now: ${health.checked} of ${health.activeMonitors.length} sources done.`;
+  else if (health.checkStartedAt) status = `Checked all ${health.activeMonitors.length} sources.`;
   else if (workspace.status_detail) status = workspace.status_detail;
   else
-    status = `Watching ${competitors.length} competitors across ${health.monitors.length} sources. Last check ${timeAgo(lastCheck)}.`;
+    status = `Watching ${competitors.length} competitors across ${health.activeMonitors.length} active sources. Last check ${timeAgo(lastCheck)}.`;
 
   return (
     <header className="sticky top-0 z-20 border-b border-hairline bg-surface">
@@ -226,7 +233,7 @@ function TopBar({
         </p>
         {health?.checking && (
           <div className="h-1 w-24 overflow-hidden rounded-full bg-hairline" aria-hidden>
-            <div className="h-full bg-ink transition-[width]" style={{ width: `${(100 * health.checked) / Math.max(1, health.monitors.length)}%` }} />
+            <div className="h-full bg-ink transition-[width]" style={{ width: `${(100 * health.checked) / Math.max(1, health.activeMonitors.length)}%` }} />
           </div>
         )}
         <div className="ml-auto flex items-center gap-2 sm:gap-3">

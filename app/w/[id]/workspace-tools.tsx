@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import type { Feedback } from "@/lib/signals";
 import { safeSourceUrl } from "@/lib/comparison";
 import { timeAgo } from "@/lib/time";
 import { SIGNAL_LABEL, type EventRow, type MonitorStatus, type Signal } from "@/lib/types";
@@ -20,7 +21,7 @@ function Status({ notice, id }: { notice: Notice; id?: string }) {
   return <p id={id} role="status" className={`text-[12px] leading-relaxed ${notice?.error ? "text-redline" : "text-inserted"}`}>{notice?.text}</p>;
 }
 
-export function WorkspaceTools({ workspaceId, events, names, monitors }: { workspaceId: string; events: EventRow[]; names: Record<string, string>; monitors: MonitorStatus[] }) {
+export function WorkspaceTools({ workspaceId, events, names, monitors, feedback = {}, onFeedbackSaved }: { workspaceId: string; events: EventRow[]; names: Record<string, string>; monitors: MonitorStatus[]; feedback?: Feedback; onFeedbackSaved?: (id:string,rating:NonNullable<Feedback[string]>)=>void }) {
   const uid = useId();
   const search = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
@@ -86,6 +87,7 @@ export function WorkspaceTools({ workspaceId, events, names, monitors }: { works
       const r = await fetch(`/api/workspaces/${workspaceId}/events/${eventId}/feedback`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rating }) });
       if (!r.ok) throw new Error("feedback");
       setRatings(old => ({ ...old, [eventId]: rating }));
+      onFeedbackSaved?.(eventId,rating);
       setFeedbackNotice(old => ({ ...old, [eventId]: { text: "Feedback saved." } }));
     } catch { setFeedbackNotice(old => ({ ...old, [eventId]: { text: "Couldn’t save feedback. Try again.", error: true } })); }
     finally { setRatingBusy(old => ({ ...old, [eventId]: false })); }
@@ -131,7 +133,7 @@ export function WorkspaceTools({ workspaceId, events, names, monitors }: { works
             <div className="flex flex-wrap items-center gap-3"><button type="submit" disabled={savingDigest || !dirty || invalidDigest} className={primary}>{savingDigest ? "Saving…" : "Save preferences"}</button><Status notice={digestNotice} />{dirty && !digestNotice && <span className="text-[12px] text-graphite">Unsaved changes</span>}</div>
           </form>}
         </div>
-        <aside className="hidden self-start rounded-lg bg-canvas/70 p-5 xl:block" aria-label="Digest details"><div className="flex items-center gap-2 text-graphite"><Icon name="mail" /><p className="text-[10px] font-semibold uppercase tracking-widest">In your inbox</p></div><h3 className="mt-4 text-[16px] font-semibold">A few updates. A clearer picture.</h3><ul className="mt-4 space-y-4 text-[13px] leading-relaxed text-graphite"><li>Up to five recent changes marked medium or high importance.</li><li>Company names, short summaries and links to the original sources.</li><li>Only the topics you choose. No email on quiet days.</li></ul></aside>
+        <aside className="hidden self-start rounded-lg bg-canvas/70 p-5 xl:block" aria-label="Digest details"><div className="flex items-center gap-2 text-graphite"><Icon name="mail" /><p className="text-[10px] font-semibold uppercase tracking-widest">In your inbox</p></div><h3 className="mt-4 text-[16px] font-semibold">A few updates. A clearer picture.</h3><ul className="mt-4 space-y-4 text-[13px] leading-relaxed text-graphite"><li>Up to five prioritized changes, with routine updates and repeated reports filtered out.</li><li>Company names, short summaries and links to the original sources.</li><li>Only the topics you choose. No email on quiet days.</li></ul></aside>
       </div>
     </div>
 
@@ -151,8 +153,9 @@ export function WorkspaceTools({ workspaceId, events, names, monitors }: { works
       <div className="flex flex-wrap items-center justify-between gap-2 px-5 py-3"><p id={`${uid}-results-count`} role="status" className="text-[12px] font-semibold tabular-nums">{filtered.length} {filtered.length === 1 ? "result" : "results"}</p><span className="text-[11px] text-graphite">Searching {events.length} loaded changes</span></div>
       {filtered.length ? <><div className="divide-y divide-hairline">{filtered.slice(0, limit).map(e => <article key={e.id} className="px-5 py-5 sm:px-6">
         <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-graphite"><span className="font-semibold text-ink">{names[e.competitor_id] ?? "Competitor"}</span><span aria-hidden="true">·</span><span>{SIGNAL_LABEL[e.signal]}</span><span aria-hidden="true">·</span><time dateTime={e.detected_at ?? e.received_at}>{timeAgo(e.detected_at ?? e.received_at)}</time>{e.importance === "high" && <span className="rounded-full bg-redline-wash px-2 py-0.5 font-medium text-redline">High importance</span>}</div>
+        {e.assessment?.priority === "quiet" && <p className="mt-2 text-[11px] text-graphite">Filtered: {e.assessment.reason}</p>}
         <h3 className="mt-2 break-words text-[15px] font-semibold leading-snug">{e.title ?? "Change detected"}</h3>{e.summary && <p className="mt-2 max-w-3xl text-[13px] leading-relaxed text-graphite [overflow-wrap:anywhere]">{e.summary}</p>}
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2">{safeSourceUrl(e.url) && <a href={safeSourceUrl(e.url)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-1 text-[12px] font-semibold hover:underline">View source<Icon name="arrow" className="h-3.5 w-3.5" /><span className="sr-only"> (opens in a new tab)</span></a>}<div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-[11px] text-graphite">Useful?</span>{(["useful", "not_useful"] as const).map(rating => <button key={rating} type="button" aria-label={`${rating === "useful" ? "Useful" : "Not useful"}: ${e.title ?? "Change detected"}`} aria-pressed={ratings[e.id] === rating} disabled={ratingBusy[e.id]} onClick={() => void rate(e.id, rating)} className="min-h-10 min-w-11 rounded-lg border border-hairline px-3 text-[12px] text-graphite hover:bg-canvas aria-pressed:border-ink aria-pressed:bg-canvas aria-pressed:font-semibold aria-pressed:text-ink disabled:opacity-50">{rating === "useful" ? "Yes" : "No"}</button>)}</div></div><Status notice={feedbackNotice[e.id]} />
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-x-5 gap-y-2">{safeSourceUrl(e.url) && <a href={safeSourceUrl(e.url)} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-1 text-[12px] font-semibold hover:underline">View source<Icon name="arrow" className="h-3.5 w-3.5" /><span className="sr-only"> (opens in a new tab)</span></a>}<div className="flex flex-wrap items-center gap-2"><span className="mr-1 text-[11px] text-graphite">Useful?</span>{(["useful", "not_useful"] as const).map(rating => <button key={rating} type="button" aria-label={`${rating === "useful" ? "Useful" : "Not useful"}: ${e.title ?? "Change detected"}`} aria-pressed={(ratings[e.id] ?? feedback[e.id]) === rating} disabled={ratingBusy[e.id]} onClick={() => void rate(e.id, rating)} className="min-h-10 min-w-11 rounded-lg border border-hairline px-3 text-[12px] text-graphite hover:bg-canvas aria-pressed:border-ink aria-pressed:bg-canvas aria-pressed:font-semibold aria-pressed:text-ink disabled:opacity-50">{rating === "useful" ? "Yes" : "No"}</button>)}</div></div><Status notice={feedbackNotice[e.id]} />
       </article>)}</div>{filtered.length > limit && <div className="border-t border-hairline px-5 py-3"><button type="button" onClick={() => setLimit(old => old + 5)} className={`${control} w-full font-medium`}>Show more results ({filtered.length - limit} remaining)</button></div>}</> : <div className="px-5 pt-4 pb-7 text-center"><Icon name="search" className="mx-auto h-6 w-6 text-muted" /><p className="mt-3 text-[14px] font-medium">No matching changes</p><p className="mt-1 text-[12px] text-graphite">Try a competitor name, topic or shorter phrase.</p><button type="button" onClick={() => { setQuery(""); search.current?.focus(); }} className="mt-2 min-h-11 px-3 text-[12px] font-semibold hover:underline">Clear search</button></div>}
     </div>}
   </section>;

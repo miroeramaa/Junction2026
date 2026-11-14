@@ -77,19 +77,12 @@ function Block({ title, children }: { title: string; children: ReactNode }) {
 export function ComparisonMatrix({ workspaceId, competitors, cards, events, monitors, onSelect, loading = false, onProfileSaved }: Props) {
   const [includeDemo, setIncludeDemo] = useState(false);
   const [category, setCategory] = useState("overview");
-  const [pending, setPending] = useState<{ targets: Competitor[]; action: "research" | "audience" } | null>(null);
-  const confirmation = useRef<HTMLDialogElement>(null);
   const [profiles, setProfiles] = useState<Record<string, ComparisonProfile>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState<{ done: number; total: number; name: string } | null>(null);
   const [message, setMessage] = useState("");
   const [locale, setLocale] = useState("en");
   const [stopRequested, setStopRequested] = useState(false);
-  useEffect(() => {
-    const dialog = confirmation.current;
-    if (pending && dialog && !dialog.open) dialog.showModal();
-    return () => { if (dialog?.open) dialog.close(); };
-  }, [pending]);
   const running = useRef(false);
   const retryActions = useRef<Record<string, "research" | "audience">>({});
   const stop = useRef(false);
@@ -111,9 +104,9 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
   const missing = shown.filter((c) => !profileFor(c.id));
   const researched = shown.length - missing.length;
 
-  async function research(targets: Competitor[], action: "research" | "audience" = "research") {
+  function research(targets: Competitor[], action: "research" | "audience" = "research") {
     if (running.current || !targets.length || loading) return;
-    setPending({ targets, action });
+    void runResearch(targets, action);
   }
 
   async function runResearch(targets: Competitor[], action: "research" | "audience") {
@@ -125,7 +118,7 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
     let succeeded = 0;
     let attempted = 0;
     try {
-      // Sequential: one admin prompt, predictable account load, and useful per-company progress.
+      // Sequential requests keep account load predictable and progress useful.
       for (const c of targets) {
         if (stop.current) break;
         setProgress({ done: attempted, total: targets.length, name: displayName(c) });
@@ -164,12 +157,6 @@ export function ComparisonMatrix({ workspaceId, competitors, cards, events, moni
 
   if (loading) return <section aria-busy="true"><h2 className="text-2xl font-semibold">Competitor overview</h2><p role="status" className="mt-3 text-graphite">Loading your competitive landscape…</p></section>;
   return <section aria-labelledby="comparison-heading" className="min-w-0">
-    <dialog ref={confirmation} onCancel={() => setPending(null)} aria-labelledby="research-confirm-title" aria-describedby="research-confirm-description" className="fixed inset-0 m-auto w-[calc(100%-2rem)] max-w-md rounded-2xl border border-hairline bg-surface p-6 text-ink shadow-xl backdrop:bg-black/30">
-      <h3 id="research-confirm-title" className="text-xl font-semibold tracking-tight">{pending?.action === "audience" ? "Fill audience insights?" : "Update competitor research?"}</h3>
-      <p id="research-confirm-description" className="mt-3 text-[14px] leading-relaxed text-graphite">{pending?.action === "audience" ? "AI will interpret the research you already have to suggest likely customer groups. Estimates are labeled separately from company statements." : "Read the latest company pages and fill missing audience insights with AI. Your saved research stays visible while we work."}</p>
-      <p className="mt-4 rounded-lg bg-canvas p-3 text-[12px] text-graphite">{pending?.targets.length} {pending?.targets.length === 1 ? "company" : "companies"} · Uses research credits · {comparisonLanguageName(locale)}{pending?.action === "research" && <span className="mt-1 block">Up to two company pages per competitor, plus audience analysis when needed.</span>}</p>
-      <div className="mt-6 flex justify-end gap-2"><button type="button" onClick={() => setPending(null)} className="min-h-11 rounded-lg border border-hairline px-4 text-[13px] font-medium">Cancel</button><button type="button" onClick={() => { if (!pending) return; const job = pending; setPending(null); void runResearch(job.targets, job.action); }} className="min-h-11 rounded-lg bg-ink px-4 text-[13px] font-semibold text-white">{pending?.action === "audience" ? "Generate insights" : "Update research"}</button></div>
-    </dialog>
     <div className="flex flex-wrap items-start justify-between gap-5">
       <div><p className="text-[11px] font-semibold uppercase tracking-widest text-muted">Competitive landscape</p><h2 id="comparison-heading" className="mt-1 text-3xl font-semibold tracking-tight">Competitor overview</h2><p className="mt-2 max-w-xl text-[14px] text-graphite">See where competitors focus, who they serve and what’s changing.</p></div>
       <div className="flex flex-wrap gap-2">

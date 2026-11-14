@@ -15,10 +15,10 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
     signal: string;
     status: string;
     last_run_at: string | null;
-    target: { url?: string } | null;
+    target: { url?: string; query?: string; type?: string } | null;
   }[];
   // Only the watched URL leaves the server (it's the source shown on the battlecard), never the secret.
   return Response.json(
-    rows.map(({ id, competitor_id, signal, status, last_run_at, target }) => ({ id, competitor_id, signal, status, last_run_at, url: target?.url ?? null })),
+    rows.map(({ id, competitor_id, signal, status, last_run_at, target }) => ({ id, competitor_id, signal, status, last_run_at, url: target?.url ?? null, query: target?.query ?? null, target_type: target?.type })),
   );
 }

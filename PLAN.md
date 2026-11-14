@@ -211,3 +211,7 @@ The sandbox reads from the database (rendered dynamically), so an edit is live i
 - The app themes itself to the user's brand (Brand / Styleguide)
 - Slack / email daily digest
 - People search: who joined or left the competitor
+
+## Implemented watchlist management and signal triage
+
+Requested follow-up features #3 and #5: a curated signal feed with recoverable raw history and team overrides; a Manage watchlist view for competitor/source creation, correction, pause/resume and removal. Filtering is shared with briefs/digests and skips unnecessary card generation for obvious noise. Controls preserve monitor configuration, scope all mutations to the workspace, exclude paused sources from sweeps, and stop remote monitors before deleting a competitor. See README for the API and validation details.

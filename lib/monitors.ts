@@ -95,7 +95,8 @@ export async function sweepWorkspace(workspaceId: string) {
       .from("monitors")
       .select("id, context_monitor_id, competitors!inner(workspace_id)")
       .eq("competitors.workspace_id", workspaceId)
-      .not("context_monitor_id", "is", null),
+      .not("context_monitor_id", "is", null)
+      .in("status", ["active", "baseline", "failed"]),
   ) as unknown as { id: string; context_monitor_id: string }[];
   const results = await Promise.allSettled(rows.map((r) => runMonitorNow(r.context_monitor_id)));
   return { queued: results.filter((r) => r.status === "fulfilled").length, total: rows.length };
