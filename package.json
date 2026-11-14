@@ -1,0 +1,44 @@
+{
+  "name": "competitor-radar",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "poc:discover": "node --experimental-websocket --env-file=.env --import tsx poc/01-discover.ts",
+    "poc:pricing": "node --experimental-websocket --env-file=.env --import tsx poc/02-pricing.ts",
+    "poc:monitor": "node --experimental-websocket --env-file=.env --import tsx poc/03-monitor.ts",
+    "poc:webhook": "node --experimental-websocket --env-file=.env --import tsx poc/04-webhook.ts",
+    "typecheck": "tsc --noEmit",
+    "dev": "NODE_OPTIONS=--experimental-websocket next dev",
+    "build": "next build",
+    "start": "next start",
+    "check": "node --experimental-websocket --env-file=.env --import tsx poc/00-check.ts",
+    "status": "node --experimental-websocket --env-file=.env --import tsx poc/05-status.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tailwindcss/turbopack": "^4.3.3",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.119.0",
+    "next": "^16.4.6",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  },
+  "type": "module",
+  "engines": {
+    "node": "22.x"
+  }
+}
