@@ -14,9 +14,16 @@ async function setStatus(workspaceId: string, status: string, detail: string | n
   must(await db().from("workspaces").update({ status, status_detail: detail }).eq("id", workspaceId));
 }
 
-export async function createWorkspace(domain: string, name: string): Promise<string> {
+export const normalizeDomain = (d: string) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "");
+
+/** One workspace per company: returns the existing one for this domain instead of creating duplicate monitors. */
+export async function findOrCreateWorkspace(domain: string, name: string): Promise<{ id: string; existing: boolean }> {
+  const existing = must(
+    await db().from("workspaces").select("id").eq("domain", domain).order("created_at").limit(1),
+  ) as { id: string }[];
+  if (existing.length) return { id: existing[0].id, existing: true };
   const row = must(await db().from("workspaces").insert({ domain, name }).select("id").single());
-  return row.id;
+  return { id: row.id, existing: false };
 }
 
 /** Brand → Answers → Brand per competitor. Ends in status 'review' with unconfirmed competitors. */
